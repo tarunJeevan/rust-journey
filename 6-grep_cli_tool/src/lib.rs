@@ -1,4 +1,7 @@
+// use colored::Colorize;
 use std::{env, error::Error, fs};
+
+use colored::Colorize;
 
 pub struct Config {
     pub query: String,
@@ -61,30 +64,33 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     };
 
     for line in results {
-        println!("{}", line)
+        println!("{}", line);
     }
 
     Ok(())
 }
 
-pub fn search<'a>(query: &str, content: &'a str) -> Vec<&'a str> {
-    let mut result: Vec<&str> = vec![];
+pub fn search(query: &str, content: &str) -> Vec<String> {
+    let mut result: Vec<String> = vec![];
 
     for line in content.lines() {
         if line.contains(query) {
-            result.push(line);
+            let mod_line = line.replace(query, &query.red().bold().to_string());
+            result.push(mod_line);
         }
     }
     result
 }
 
-pub fn search_ci<'a>(query: &str, content: &'a str) -> Vec<&'a str> {
-    let query = query.to_lowercase();
-    let mut result: Vec<&str> = vec![];
+pub fn search_ci(query: &str, content: &str) -> Vec<String> {
+    let mod_query = query.to_lowercase();
+    let mut result: Vec<String> = vec![];
 
     for line in content.lines() {
-        if line.to_lowercase().contains(&query) {
-            result.push(line);
+        if line.to_lowercase().contains(&mod_query) {
+            // FIXME: String is only colored if query perfectly matches line text. Ex: If query is 'to' then 'To' in line isn't colored
+            let mod_line = line.replace(query, &query.red().bold().to_string());
+            result.push(mod_line);
         }
     }
     result
