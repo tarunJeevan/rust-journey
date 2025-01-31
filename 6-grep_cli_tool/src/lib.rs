@@ -1,7 +1,7 @@
-// use colored::Colorize;
 use std::{env, error::Error, fs};
 
 use colored::Colorize;
+use regex::Regex;
 
 pub struct Config {
     pub query: String,
@@ -54,7 +54,6 @@ impl Config {
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let content = fs::read_to_string(&config.filepath)?;
 
-    // TODO: Stylize matched portion of line with underline or color
     // TODO: Add line numbers to each line
 
     let results = if config.ignore_case {
@@ -70,11 +69,13 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+// Regular search
 pub fn search(query: &str, content: &str) -> Vec<String> {
     let mut result: Vec<String> = vec![];
 
     for line in content.lines() {
         if line.contains(query) {
+            // Create modified line by stylizing matched portions of original line
             let mod_line = line.replace(query, &query.red().bold().to_string());
             result.push(mod_line);
         }
@@ -82,14 +83,26 @@ pub fn search(query: &str, content: &str) -> Vec<String> {
     result
 }
 
+// Case insensitive search
 pub fn search_ci(query: &str, content: &str) -> Vec<String> {
-    let mod_query = query.to_lowercase();
     let mut result: Vec<String> = vec![];
 
+    // Create regex for case insensitive pattern matching
+    let pattern = format!(r"(?i){}", regex::escape(query));
+    let re = Regex::new(&pattern).unwrap();
+
     for line in content.lines() {
-        if line.to_lowercase().contains(&mod_query) {
-            // FIXME: String is only colored if query perfectly matches line text. Ex: If query is 'to' then 'To' in line isn't colored
-            let mod_line = line.replace(query, &query.red().bold().to_string());
+        if line.to_lowercase().contains(&query.to_lowercase()) {
+            // Create mutable string to hold modified line
+            let mut mod_line = line.to_string();
+
+            // Find all matches in line
+            let matches: Vec<&str> = re.find_iter(line).map(|m| m.as_str()).collect();
+
+            // For every match, replace the matched portion with a colored version
+            for n in matches.iter() {
+                mod_line = re.replace(line, n.red().bold().to_string()).to_string();
+            }
             result.push(mod_line);
         }
     }
@@ -103,12 +116,14 @@ mod tests {
     #[test]
     fn case_sensitive() {
         let query = "duct";
+        let matched_string =
+            "safe, fast, productive.".replace("duct", &"duct".red().bold().to_string());
         let content = "\
 Rust:
 safe, fast, productive.
 Pick three.";
 
-        assert_eq!(vec!["safe, fast, productive."], search(query, content));
+        assert_eq!(vec![matched_string], search(query, content));
     }
 
     #[test]
@@ -120,6 +135,12 @@ safe, fast, productive.
 Pick three.
 Trust me.";
 
-        assert_eq!(vec!["Rust:", "Trust me."], search_ci(query, content))
+        assert_eq!(
+            vec![
+                "Rust:".replace("Rust", &"Rust".red().bold().to_string()),
+                "Trust me.".replace("rust", &"rust".red().bold().to_string())
+            ],
+            search_ci(query, content)
+        )
     }
 }
