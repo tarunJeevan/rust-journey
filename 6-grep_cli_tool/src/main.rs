@@ -23,7 +23,6 @@ struct Cli {
 
 fn main() {
     let args = Cli::parse();
-    println!("{:?}", args);
 
     if let Err(e) = run(args.query, args.file, args.ignore_case) {
         eprintln!("Application error: {}", e);
