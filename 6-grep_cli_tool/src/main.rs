@@ -1,7 +1,7 @@
-use grep_cli_tool::Config;
-use std::{env, process};
+use std::process;
 
 use clap::{ArgAction, Parser};
+use mygrep::run;
 
 #[derive(Parser, Debug)]
 #[command(name = "mygrep", about = "A grep-like CLI tool")]
@@ -22,18 +22,10 @@ struct Cli {
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args = Cli::parse();
     println!("{:?}", args);
 
-    let clap_args = Cli::parse();
-    println!("{:?}", clap_args);
-
-    let config = Config::build(&args).unwrap_or_else(|err| {
-        eprintln!("Problem parsing the arguments: {err}");
-        process::exit(1);
-    });
-
-    if let Err(e) = grep_cli_tool::run(config) {
+    if let Err(e) = run(args.query, args.file, args.ignore_case) {
         eprintln!("Application error: {}", e);
         process::exit(1);
     }

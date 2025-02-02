@@ -1,67 +1,23 @@
-use std::{env, error::Error, fs};
+use std::{error::Error, fs};
 
 use colored::Colorize;
 use regex::Regex;
 
-pub struct Config {
-    pub query: String,
-    pub filepath: String,
-    pub ignore_case: bool,
-}
+pub fn run(
+    query: String,
+    filepath: String,
+    ignore_case: bool,
+    // line_numbers: bool,
+) -> Result<(), Box<dyn Error>> {
+    let content = fs::read_to_string(filepath)?;
 
-impl Config {
-    pub fn build(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            return Err("Insufficient arguments. Expected at least 2 arguments.");
-        }
-
-        // TODO: Make order of command line arguments more flexible
-
-        // NOTE: Environment variable approach to ignore case
-        let ignore_case_env = env::var("IGNORE_CASE").is_ok();
-
-        // FIXME: Prettify the following into more clean and idiomatic code
-        // No ignore case flag
-        if args.len() == 3 {
-            let query = args[1].clone();
-            let filepath = args[2].clone();
-
-            return Ok(Config {
-                query,
-                filepath,
-                ignore_case: ignore_case_env,
-            });
-        }
-        // There is an ignore case flag
-        else if args.len() == 4 {
-            let query = args[2].clone();
-            let filepath = args[3].clone();
-
-            // NOTE: Command line argument approach to ignore case
-            let ignore_case_cli = matches!(args[1].clone().as_str(), "--ignore-case" | "-I");
-
-            return Ok(Config {
-                query,
-                filepath,
-                ignore_case: ignore_case_cli || ignore_case_env,
-            });
-        }
-
-        Err("Command should be formatted 'minigrep [-I | --ignore-case] query filepath'")
-    }
-}
-
-pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    let content = fs::read_to_string(&config.filepath)?;
-
-    // TODO: Add line numbers to each line
-
-    let results = if config.ignore_case {
-        search_ci(&config.query, &content)
+    let results = if ignore_case {
+        search_ci(&query, &content)
     } else {
-        search(&config.query, &content)
+        search(&query, &content)
     };
 
+    // TODO: Add line numbers if associated bool is true
     for line in results {
         println!("{}", line);
     }

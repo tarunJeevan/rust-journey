@@ -1,5 +1,5 @@
 [package]
-name = "grep_cli_tool"
+name = "mygrep"
 version = "0.1.0"
 edition = "2021"
 
