@@ -11,11 +11,7 @@ pub fn run(
 ) -> Result<(), Box<dyn Error>> {
     let content = fs::read_to_string(filepath)?;
 
-    let results = if ignore_case {
-        search_ci(&query, &content)
-    } else {
-        search(&query, &content)
-    };
+    let results = search(&query, &content, ignore_case);
 
     // TODO: Add line numbers if associated bool is true
     for line in results {
@@ -25,44 +21,43 @@ pub fn run(
     Ok(())
 }
 
-// Regular search
-pub fn search(query: &str, content: &str) -> Vec<String> {
+pub fn search(query: &str, content: &str, ignore_case: bool) -> Vec<String> {
     let mut result: Vec<String> = vec![];
 
-    for line in content.lines() {
-        if line.contains(query) {
-            // Create modified line by stylizing matched portions of original line
-            let mod_line = line.replace(query, &query.red().bold().to_string());
-            result.push(mod_line);
-        }
-    }
-    result
-}
+    if ignore_case {
+        // Case insenstive search
 
-// Case insensitive search
-pub fn search_ci(query: &str, content: &str) -> Vec<String> {
-    let mut result: Vec<String> = vec![];
+        // Create regex for case insensitive pattern matching
+        let pattern = format!(r"(?i){}", regex::escape(query));
+        let re = Regex::new(&pattern).unwrap();
 
-    // Create regex for case insensitive pattern matching
-    let pattern = format!(r"(?i){}", regex::escape(query));
-    let re = Regex::new(&pattern).unwrap();
+        for line in content.lines() {
+            if line.to_lowercase().contains(&query.to_lowercase()) {
+                // Create mutable string to hold modified line
+                let mut mod_line = line.to_string();
 
-    for line in content.lines() {
-        if line.to_lowercase().contains(&query.to_lowercase()) {
-            // Create mutable string to hold modified line
-            let mut mod_line = line.to_string();
+                // Find all matches in line
+                let matches: Vec<&str> = re.find_iter(line).map(|m| m.as_str()).collect();
 
-            // Find all matches in line
-            let matches: Vec<&str> = re.find_iter(line).map(|m| m.as_str()).collect();
-
-            // For every match, replace the matched portion with a colored version
-            for n in matches.iter() {
-                mod_line = re.replace(line, n.red().bold().to_string()).to_string();
+                // For every match, replace the matched portion with a colored version
+                for n in matches.iter() {
+                    mod_line = re.replace(line, n.red().bold().to_string()).to_string();
+                }
+                result.push(mod_line);
             }
-            result.push(mod_line);
         }
+        result
+    } else {
+        // Regular search
+        for line in content.lines() {
+            if line.contains(query) {
+                // Create modified line by stylizing matched portions of original line
+                let mod_line = line.replace(query, &query.red().bold().to_string());
+                result.push(mod_line);
+            }
+        }
+        result
     }
-    result
 }
 
 #[cfg(test)]
@@ -71,6 +66,7 @@ mod tests {
 
     #[test]
     fn case_sensitive() {
+        let ignore_case = false;
         let query = "duct";
         let matched_string =
             "safe, fast, productive.".replace("duct", &"duct".red().bold().to_string());
@@ -79,11 +75,12 @@ Rust:
 safe, fast, productive.
 Pick three.";
 
-        assert_eq!(vec![matched_string], search(query, content));
+        assert_eq!(vec![matched_string], search(query, content, ignore_case));
     }
 
     #[test]
     fn case_insensitive() {
+        let ignore_case = true;
         let query = "rUSt";
         let content = "\
 Rust:
@@ -96,7 +93,7 @@ Trust me.";
                 "Rust:".replace("Rust", &"Rust".red().bold().to_string()),
                 "Trust me.".replace("rust", &"rust".red().bold().to_string())
             ],
-            search_ci(query, content)
+            search(query, content, ignore_case)
         )
     }
 }
