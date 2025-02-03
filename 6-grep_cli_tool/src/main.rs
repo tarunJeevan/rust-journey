@@ -24,7 +24,7 @@ struct Cli {
 fn main() {
     let args = Cli::parse();
 
-    if let Err(e) = run(args.query, args.file, args.ignore_case) {
+    if let Err(e) = run(args.query, args.file, args.ignore_case, args.line_numbers) {
         eprintln!("Application error: {}", e);
         process::exit(1);
     }
