@@ -48,50 +48,53 @@ fn search<R: BufRead>(
     let mut result: Vec<String> = vec![];
 
     for (line_number, line) in content.lines().enumerate() {
-        if let Ok(line_content) = line {
-            // Pattern matching
-            let matched_line: String = if ignore_case {
-                // Case insensitive matching
+        match line {
+            Ok(line_content) => {
+                // Pattern matching
+                let matched_line: String = if ignore_case {
+                    // Case insensitive matching
 
-                // Create regex for case insensitive pattern matching
-                let pattern = format!(r"(?i){}", regex::escape(&query));
-                let re = Regex::new(&pattern).unwrap();
+                    // Create regex for case insensitive pattern matching
+                    let pattern = format!(r"(?i){}", regex::escape(&query));
+                    let re = Regex::new(&pattern).unwrap();
 
-                if line_content.to_lowercase().contains(&query.to_lowercase()) {
-                    // Create mutable string to hold modified line
-                    let mut mod_line = line_content.clone();
+                    if line_content.to_lowercase().contains(&query.to_lowercase()) {
+                        // Create mutable string to hold modified line
+                        let mut mod_line = line_content.clone();
 
-                    // Find all matches in line
-                    let matches: Vec<&str> =
-                        re.find_iter(&line_content).map(|m| m.as_str()).collect();
+                        // Find all matches in line
+                        let matches: Vec<&str> =
+                            re.find_iter(&line_content).map(|m| m.as_str()).collect();
 
-                    // For every match, replace the matched portion with a colored version
-                    for n in matches.iter() {
-                        mod_line = re
-                            .replace(&line_content, n.red().bold().to_string())
-                            .to_string();
+                        // For every match, replace the matched portion with a colored version
+                        for n in matches.iter() {
+                            mod_line = re
+                                .replace(&line_content, n.red().bold().to_string())
+                                .to_string();
+                        }
+                        mod_line
+                    } else {
+                        String::new()
                     }
-                    mod_line
                 } else {
-                    String::new()
-                }
-            } else {
-                // Case sensitive matching
-                if line_content.contains(&query) {
-                    line_content.replace(&query, &query.red().bold().to_string())
-                } else {
-                    String::new()
-                }
-            };
+                    // Case sensitive matching
+                    if line_content.contains(&query) {
+                        line_content.replace(&query, &query.red().bold().to_string())
+                    } else {
+                        String::new()
+                    }
+                };
 
-            // Push matched lines to result vector. Set line numbers if flag is enabled
-            if !matched_line.is_empty() {
-                if line_numbers {
-                    result.push(format!("{}: {}", line_number, matched_line));
-                } else {
-                    result.push(matched_line);
+                // Push matched lines to result vector. Set line numbers if flag is enabled
+                if !matched_line.is_empty() {
+                    if line_numbers {
+                        result.push(format!("{}: {}", line_number + 1, matched_line));
+                    } else {
+                        result.push(matched_line);
+                    }
                 }
             }
+            Err(e) => eprintln!("Error reading line {}: {}", line_number + 1, e),
         }
     }
     result
