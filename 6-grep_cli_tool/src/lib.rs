@@ -47,6 +47,9 @@ fn search<R: BufRead>(
 ) -> Vec<String> {
     let mut result: Vec<String> = vec![];
 
+    // TODO: Implement matching inversion so only unmatched lines are displayed if active
+
+    // NOTE: Implement Iterator Adapter instead of pushing to result vector
     for (line_number, line) in content.lines().enumerate() {
         match line {
             Ok(line_content) => {
@@ -88,7 +91,8 @@ fn search<R: BufRead>(
                 // Push matched lines to result vector. Set line numbers if flag is enabled
                 if !matched_line.is_empty() {
                     if line_numbers {
-                        result.push(format!("{}: {}", line_number + 1, matched_line));
+                        let colored_line_num = (line_number + 1).to_string().green();
+                        result.push(format!("{}: {}", colored_line_num, matched_line));
                     } else {
                         result.push(matched_line);
                     }
