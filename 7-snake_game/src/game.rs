@@ -11,6 +11,14 @@ const GAMEOVER_COLOR: Color = [0.90, 0.00, 0.00, 0.5]; // Gameover's RGB color
 const MOVING_PERIOD: f64 = 0.1; // Snake's FPS. Current speed is 10 FPS
 const RESTART_TIME: f64 = 1.0; // Time to restart game after gameover
 
+pub enum GameState {
+    MainMenu,
+    Playing,
+    SettingsMenu,
+    Paused,
+    GameOver,
+}
+
 pub struct Game {
     snake: Snake,
 
@@ -21,7 +29,8 @@ pub struct Game {
     board_width: i32,
     board_height: i32,
 
-    game_over: bool,
+    game_state: GameState,
+
     waiting_time: f64,
 }
 
@@ -37,14 +46,16 @@ impl Game {
             board_width,
             board_height,
 
-            game_over: false,
+            game_state: GameState::MainMenu,
+
             waiting_time: 0.0,
         }
     }
 
     // Run when arrow keys are pressed
     pub fn key_pressed(&mut self, key: Key) {
-        if self.game_over {
+        // TODO: Change to work with other game states
+        if let GameState::GameOver = self.game_state {
             return;
         }
 
@@ -96,7 +107,7 @@ impl Game {
         );
 
         // Draw gameover screen
-        if self.game_over {
+        if let GameState::GameOver = self.game_state {
             draw_rectangle(
                 GAMEOVER_COLOR,
                 0,
@@ -113,7 +124,7 @@ impl Game {
     pub fn update(&mut self, delta_time: f64) {
         self.waiting_time += delta_time;
 
-        if self.game_over {
+        if let GameState::GameOver = self.game_state {
             if self.waiting_time > RESTART_TIME {
                 self.restart();
             }
@@ -139,7 +150,7 @@ impl Game {
         }
     }
 
-    // Check snake collision
+    // Check snake collision. TODO: Fix to use GameState
     fn check_if_snake_alive(&self, dir: Option<Direction>) -> bool {
         let (next_x, next_y): (i32, i32) = self.snake.next_head(dir);
 
@@ -179,7 +190,7 @@ impl Game {
             self.snake.move_forward(dir);
             self.check_eating();
         } else {
-            self.game_over = true;
+            self.game_state = GameState::GameOver;
         }
         self.waiting_time = 0.0;
     }
@@ -191,6 +202,6 @@ impl Game {
         self.food_exists = true;
         self.food_x = 6;
         self.food_y = 4;
-        self.game_over = false;
+        self.game_state = GameState::Playing;
     }
 }

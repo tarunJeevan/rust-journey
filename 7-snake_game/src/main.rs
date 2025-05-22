@@ -23,9 +23,18 @@ fn main() {
             .build()
             .unwrap(); // FIXME: Return gracefully using error handling
 
+    // TODO: Add scoring system
+    // TODO: Add main menu and settings menu
+    // TODO: Add game states such as pause, game over, etc.
+    // TODO: Add difficulty modes in settings
+    // TODO: Add toggleable wall wrapping in settings
+    // TODO: Add color customization in settings
+    // TODO: Add customizable key bindings in settings
+
     let mut game = Game::new(width, height);
 
     while let Some(event) = window.next() {
+        // TODO: Use match to handle all game states
         // Handle key presses
         if let Some(Button::Keyboard(key)) = event.press_args() {
             game.key_pressed(key);
