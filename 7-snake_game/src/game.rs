@@ -7,17 +7,9 @@ use rand::{Rng, rng};
 const FOOD_COLOR: Color = [0.80, 0.00, 0.00, 1.0]; // Food's RGB color
 const BORDER_COLOR: Color = [0.00, 0.00, 0.00, 1.0]; // Border's RGB color
 const GAMEOVER_COLOR: Color = [0.90, 0.00, 0.00, 0.5]; // Gameover's RGB color
-const PAUSE_COLOR: Color = [0.0, 0.0, 0.0, 0.5]; // Pause screen overlay RGB color
 
 const MOVING_PERIOD: f64 = 0.1; // Snake's FPS. Current speed is 10 FPS
 const RESTART_TIME: f64 = 1.0; // Time to restart game after gameover
-
-pub enum GameState {
-    MainMenu,
-    Playing,
-    Paused,
-    GameOver,
-}
 
 pub struct Game {
     snake: Snake,
@@ -29,8 +21,7 @@ pub struct Game {
     board_width: i32,
     board_height: i32,
 
-    game_state: GameState,
-
+    game_over: bool,
     waiting_time: f64,
 }
 
@@ -46,7 +37,7 @@ impl Game {
             board_width,
             board_height,
 
-            game_state: GameState::MainMenu,
+            game_over: false,
 
             waiting_time: 0.0,
         }
@@ -54,8 +45,8 @@ impl Game {
 
     // Run when arrow keys are pressed
     pub fn key_pressed(&mut self, key: Key) {
-        // TODO: Change to work with other game states
-        if let GameState::GameOver = self.game_state {
+        // Do nothing if game is over
+        if self.game_over {
             return;
         }
 
@@ -65,18 +56,10 @@ impl Game {
             Key::Down => Some(Direction::Down),
             Key::Left => Some(Direction::Left),
             Key::Right => Some(Direction::Right),
-            Key::Escape => {
-                // End current game
-                self.game_state = match self.game_state {
-                    // Ignore if already in main menu
-                    GameState::MainMenu => GameState::MainMenu,
-                    _ => GameState::GameOver,
-                };
-                None
-            }
             _ => None,
         };
 
+        // Do nothing if direction is opposite to current direction
         if dir.unwrap() == self.snake.head_direction().opposite() {
             return;
         }
@@ -94,7 +77,7 @@ impl Game {
             draw_block(FOOD_COLOR, self.food_x, self.food_y, con, g);
         }
 
-        // Draw the border
+        // Draw the borders
         draw_rectangle(BORDER_COLOR, 0, 0, self.board_width, 1, con, g);
         draw_rectangle(
             BORDER_COLOR,
@@ -116,21 +99,8 @@ impl Game {
             g,
         );
 
-        // Draw pause screen overlay over game board
-        if let GameState::Paused = self.game_state {
-            draw_rectangle(
-                PAUSE_COLOR,
-                0,
-                0,
-                self.board_width,
-                self.board_height,
-                con,
-                g,
-            );
-        }
-
         // Draw gameover screen
-        if let GameState::GameOver = self.game_state {
+        if self.game_over {
             draw_rectangle(
                 GAMEOVER_COLOR,
                 0,
@@ -143,21 +113,11 @@ impl Game {
         }
     }
 
-    // Draw settings menu
-    pub fn draw_settings_menu(&self, con: &Context, g: &mut G2d) {
-        // TODO: Implement settings menu drawing
-    }
-
-    // Draw main menu
-    pub fn draw_main_menu(&self, con: &Context, g: &mut G2d) {
-        // TODO: Implement main menu drawing
-    }
-
     // Update game state over time
     pub fn update(&mut self, delta_time: f64) {
         self.waiting_time += delta_time;
 
-        if let GameState::GameOver = self.game_state {
+        if self.game_over {
             if self.waiting_time > RESTART_TIME {
                 self.restart();
             }
@@ -173,16 +133,6 @@ impl Game {
         }
     }
 
-    // Get current game state
-    pub fn get_game_state(&self) -> &GameState {
-        &self.game_state
-    }
-
-    // Change game state
-    pub fn change_game_state(&mut self, new_state: GameState) {
-        self.game_state = new_state;
-    }
-
     // Check if snake has eaten food
     fn check_eating(&mut self) {
         let (head_x, head_y): (i32, i32) = self.snake.head_position();
@@ -193,9 +143,9 @@ impl Game {
         }
     }
 
-    // Check snake collision. TODO: Fix to use GameState
+    // Check snake collision.
     fn check_if_snake_alive(&self, dir: Option<Direction>) -> bool {
-        let (next_x, next_y): (i32, i32) = self.snake.next_head(dir);
+        let (next_x, next_y) = self.snake.next_head(dir);
 
         // Check if head overlaps body
         if self.snake.overlap_body(next_x, next_y) {
@@ -233,7 +183,7 @@ impl Game {
             self.snake.move_forward(dir);
             self.check_eating();
         } else {
-            self.game_state = GameState::GameOver;
+            self.game_over = true;
         }
         self.waiting_time = 0.0;
     }
@@ -245,6 +195,6 @@ impl Game {
         self.food_exists = true;
         self.food_x = 6;
         self.food_y = 4;
-        self.game_state = GameState::Playing;
+        self.game_over = false;
     }
 }
