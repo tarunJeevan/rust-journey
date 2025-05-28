@@ -7,6 +7,7 @@ use rand::{Rng, rng};
 const FOOD_COLOR: Color = [0.80, 0.00, 0.00, 1.0]; // Food's RGB color
 const BORDER_COLOR: Color = [0.00, 0.00, 0.00, 1.0]; // Border's RGB color
 const GAMEOVER_COLOR: Color = [0.90, 0.00, 0.00, 0.5]; // Gameover's RGB color
+const PAUSE_COLOR: Color = [0.0, 0.0, 0.0, 0.5]; // Pause screen overlay RGB color
 
 const MOVING_PERIOD: f64 = 0.1; // Snake's FPS. Current speed is 10 FPS
 const RESTART_TIME: f64 = 1.0; // Time to restart game after gameover
@@ -14,7 +15,6 @@ const RESTART_TIME: f64 = 1.0; // Time to restart game after gameover
 pub enum GameState {
     MainMenu,
     Playing,
-    SettingsMenu,
     Paused,
     GameOver,
 }
@@ -59,11 +59,21 @@ impl Game {
             return;
         }
 
+        // Add key bindings
         let dir = match key {
             Key::Up => Some(Direction::Up),
             Key::Down => Some(Direction::Down),
             Key::Left => Some(Direction::Left),
             Key::Right => Some(Direction::Right),
+            Key::Escape => {
+                // End current game
+                self.game_state = match self.game_state {
+                    // Ignore if already in main menu
+                    GameState::MainMenu => GameState::MainMenu,
+                    _ => GameState::GameOver,
+                };
+                None
+            }
             _ => None,
         };
 
@@ -106,6 +116,19 @@ impl Game {
             g,
         );
 
+        // Draw pause screen overlay over game board
+        if let GameState::Paused = self.game_state {
+            draw_rectangle(
+                PAUSE_COLOR,
+                0,
+                0,
+                self.board_width,
+                self.board_height,
+                con,
+                g,
+            );
+        }
+
         // Draw gameover screen
         if let GameState::GameOver = self.game_state {
             draw_rectangle(
@@ -118,6 +141,16 @@ impl Game {
                 g,
             );
         }
+    }
+
+    // Draw settings menu
+    pub fn draw_settings_menu(&self, con: &Context, g: &mut G2d) {
+        // TODO: Implement settings menu drawing
+    }
+
+    // Draw main menu
+    pub fn draw_main_menu(&self, con: &Context, g: &mut G2d) {
+        // TODO: Implement main menu drawing
     }
 
     // Update game state over time
@@ -138,6 +171,16 @@ impl Game {
         if self.waiting_time > MOVING_PERIOD {
             self.update_snake(None);
         }
+    }
+
+    // Get current game state
+    pub fn get_game_state(&self) -> &GameState {
+        &self.game_state
+    }
+
+    // Change game state
+    pub fn change_game_state(&mut self, new_state: GameState) {
+        self.game_state = new_state;
     }
 
     // Check if snake has eaten food
