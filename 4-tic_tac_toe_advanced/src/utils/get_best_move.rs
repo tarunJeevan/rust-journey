@@ -1,5 +1,5 @@
-use crate::models::Player;
 use super::get_winner;
+use crate::models::Player;
 
 pub fn get_best_move(board: &[char; 9], comp: &Player) -> usize {
     let mut best_score = i32::MIN;
@@ -25,10 +25,10 @@ pub fn get_best_move(board: &[char; 9], comp: &Player) -> usize {
     move_index
 }
 
-fn minimax(board: &mut[char; 9], comp: &Player, comp_turn: bool) -> i32 {
+fn minimax(board: &mut [char; 9], comp: &Player, comp_turn: bool) -> i32 {
     let human = comp.other();
 
-    let winner = get_winner(&board);
+    let winner = get_winner(board);
 
     if winner == Some(comp.clone()) {
         return 1;
@@ -46,11 +46,11 @@ fn minimax(board: &mut[char; 9], comp: &Player, comp_turn: bool) -> i32 {
         for i in 0..9 {
             if board[i] == ' ' {
                 board[i] = comp.char();
-    
+
                 let score = minimax(board, comp, false);
-    
+
                 board[i] = ' ';
-    
+
                 best_score = best_score.max(score);
             }
         }
@@ -61,11 +61,11 @@ fn minimax(board: &mut[char; 9], comp: &Player, comp_turn: bool) -> i32 {
         for i in 0..9 {
             if board[i] == ' ' {
                 board[i] = human.char();
-    
+
                 let score = minimax(board, comp, true);
-    
+
                 board[i] = ' ';
-    
+
                 best_score = best_score.min(score);
             }
         }
