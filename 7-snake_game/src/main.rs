@@ -34,11 +34,16 @@ fn main() {
     let mut game = Game::new(width, height);
 
     while let Some(event) = window.next() {
-        // TODO: Use match to handle all game states
+        // Use match to handle all game states
         match game.get_game_state() {
             GameState::MainMenu => {
                 // Handle main menu logic here
                 // For now, we will just start the game when any key is pressed
+                window.draw_2d(&event, |c, g, _| {
+                    clear(BACK_COLOR, g);
+                    // TODO: Draw main menu text
+                });
+
                 if let Some(Button::Keyboard(_)) = event.press_args() {
                     game.change_game_state(GameState::Playing);
                 }
@@ -49,12 +54,27 @@ fn main() {
                     if key == Key::P {
                         // Press 'P' to resume
                         game.change_game_state(GameState::Paused);
+                    } else {
+                        game.key_pressed(key);
                     }
-                    game.key_pressed(key);
                 }
+
+                // Draw and update the game board
+                window.draw_2d(&event, |c, g, _| {
+                    clear(BACK_COLOR, g);
+                    game.draw(&c, g);
+                });
+                event.update(|arg| {
+                    game.update(arg.dt);
+                });
             }
             GameState::Paused => {
-                // Handle paused state logic
+                window.draw_2d(&event, |c, g, _| {
+                    clear(BACK_COLOR, g);
+                    // TODO: Draw pause screen
+                });
+
+                // Toggle pause state
                 if let Some(Button::Keyboard(key)) = event.press_args() {
                     if key == Key::P {
                         // Press 'P' to resume
@@ -63,32 +83,31 @@ fn main() {
                 }
             }
             GameState::GameOver => {
+                window.draw_2d(&event, |c, g, _| {
+                    clear(BACK_COLOR, g);
+                    // TODO: Draw game over screen
+                });
                 // Handle game over logic
                 if let Some(Button::Keyboard(key)) = event.press_args() {
+                    // Press 'R' to restart or 'Q' to quit
                     if key == Key::R {
-                        // Press 'R' to restart
                         game = Game::new(width, height);
                     } else if key == Key::Q {
-                        // Press 'Q' to quit
                         return;
                     }
                 }
             }
+            GameState::Settings => {
+                window.draw_2d(&event, |c, g, _| {
+                    clear(BACK_COLOR, g);
+                    // TODO: Draw settings menu
+                });
+                // Handle settings logic
+                // NOTE: For now, we will just return to the main menu when any key is pressed
+                if let Some(Button::Keyboard(_)) = event.press_args() {
+                    game.change_game_state(GameState::MainMenu);
+                }
+            }
         }
-        // Handle key presses
-        if let Some(Button::Keyboard(key)) = event.press_args() {
-            game.key_pressed(key);
-        }
-
-        // Handle screen rendering
-        window.draw_2d(&event, |c, g, _d| {
-            clear(BACK_COLOR, g);
-            game.draw(&c, g);
-        });
-
-        // Handle event loop
-        event.update(|arg| {
-            game.update(arg.dt);
-        });
     }
 }

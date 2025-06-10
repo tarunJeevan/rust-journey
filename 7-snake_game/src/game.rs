@@ -12,11 +12,13 @@ const PAUSE_COLOR: Color = [0.0, 0.0, 0.0, 0.5]; // Pause screen overlay RGB col
 const MOVING_PERIOD: f64 = 0.1; // Snake's FPS. Current speed is 10 FPS
 const RESTART_TIME: f64 = 1.0; // Time to restart game after gameover
 
+#[derive(Clone, Debug)]
 pub enum GameState {
     MainMenu,
     Playing,
     Paused,
     GameOver,
+    Settings,
 }
 
 pub struct Game {
@@ -143,16 +145,6 @@ impl Game {
         }
     }
 
-    // Draw settings menu
-    pub fn draw_settings_menu(&self, con: &Context, g: &mut G2d) {
-        // TODO: Implement settings menu drawing
-    }
-
-    // Draw main menu
-    pub fn draw_main_menu(&self, con: &Context, g: &mut G2d) {
-        // TODO: Implement main menu drawing
-    }
-
     // Update game state over time
     pub fn update(&mut self, delta_time: f64) {
         self.waiting_time += delta_time;
@@ -174,8 +166,8 @@ impl Game {
     }
 
     // Get current game state
-    pub fn get_game_state(&self) -> &GameState {
-        &self.game_state
+    pub fn get_game_state(&self) -> GameState {
+        self.game_state.clone()
     }
 
     // Change game state
