@@ -24,12 +24,9 @@ fn main() {
             .unwrap(); // FIXME: Return gracefully using error handling
 
     // TODO: Add scoring system
-    // TODO: Add main menu and settings menu
-    // TODO: Add game states such as pause, game over, etc.
     // TODO: Add difficulty modes in settings
     // TODO: Add toggleable wall wrapping in settings
     // TODO: Add color customization in settings
-    // TODO: Add customizable key bindings in settings
 
     let mut game = Game::new(width, height);
 
@@ -37,75 +34,62 @@ fn main() {
         // Use match to handle all game states
         match game.get_game_state() {
             GameState::MainMenu => {
-                // Handle main menu logic here
-                // For now, we will just start the game when any key is pressed
+                // Draw main menu
                 window.draw_2d(&event, |c, g, _| {
                     clear(BACK_COLOR, g);
-                    // TODO: Draw main menu text
+                    game.draw_main_menu(&c, g);
                 });
 
-                if let Some(Button::Keyboard(_)) = event.press_args() {
-                    game.change_game_state(GameState::Playing);
+                if let Some(Button::Keyboard(key)) = event.press_args() {
+                    game.key_pressed(key);
                 }
             }
             GameState::Playing => {
-                // Handle playing state logic
-                if let Some(Button::Keyboard(key)) = event.press_args() {
-                    if key == Key::P {
-                        // Press 'P' to resume
-                        game.change_game_state(GameState::Paused);
-                    } else {
-                        game.key_pressed(key);
-                    }
-                }
-
-                // Draw and update the game board
+                // Draw game board
                 window.draw_2d(&event, |c, g, _| {
                     clear(BACK_COLOR, g);
-                    game.draw(&c, g);
+                    game.draw_game_board(&c, g);
                 });
+                // Handle playing state logic
+                if let Some(Button::Keyboard(key)) = event.press_args() {
+                    game.key_pressed(key);
+                }
+                // Update game state
                 event.update(|arg| {
                     game.update(arg.dt);
                 });
             }
             GameState::Paused => {
+                // Draw pause screen
                 window.draw_2d(&event, |c, g, _| {
                     clear(BACK_COLOR, g);
-                    // TODO: Draw pause screen
+                    game.draw_pause(&c, g);
                 });
-
-                // Toggle pause state
+                // Handle playing state logic
                 if let Some(Button::Keyboard(key)) = event.press_args() {
-                    if key == Key::P {
-                        // Press 'P' to resume
-                        game.change_game_state(GameState::Playing);
-                    }
+                    game.key_pressed(key);
                 }
             }
             GameState::GameOver => {
+                // Draw game over screen
                 window.draw_2d(&event, |c, g, _| {
                     clear(BACK_COLOR, g);
-                    // TODO: Draw game over screen
+                    game.draw_game_over(&c, g);
                 });
                 // Handle game over logic
                 if let Some(Button::Keyboard(key)) = event.press_args() {
-                    // Press 'R' to restart or 'Q' to quit
-                    if key == Key::R {
-                        game = Game::new(width, height);
-                    } else if key == Key::Q {
-                        return;
-                    }
+                    game.key_pressed(key);
                 }
             }
             GameState::Settings => {
+                // Draw settings screen
                 window.draw_2d(&event, |c, g, _| {
                     clear(BACK_COLOR, g);
-                    // TODO: Draw settings menu
+                    game.draw_settings(&c, g);
                 });
                 // Handle settings logic
-                // NOTE: For now, we will just return to the main menu when any key is pressed
-                if let Some(Button::Keyboard(_)) = event.press_args() {
-                    game.change_game_state(GameState::MainMenu);
+                if let Some(Button::Keyboard(key)) = event.press_args() {
+                    game.key_pressed(key);
                 }
             }
         }

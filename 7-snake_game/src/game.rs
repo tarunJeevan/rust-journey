@@ -8,6 +8,7 @@ const FOOD_COLOR: Color = [0.80, 0.00, 0.00, 1.0]; // Food's RGB color
 const BORDER_COLOR: Color = [0.00, 0.00, 0.00, 1.0]; // Border's RGB color
 const GAMEOVER_COLOR: Color = [0.90, 0.00, 0.00, 0.5]; // Gameover's RGB color
 const PAUSE_COLOR: Color = [0.0, 0.0, 0.0, 0.5]; // Pause screen overlay RGB color
+const MENU_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Settings screen RGB color
 
 const MOVING_PERIOD: f64 = 0.1; // Snake's FPS. Current speed is 10 FPS
 const RESTART_TIME: f64 = 1.0; // Time to restart game after gameover
@@ -54,40 +55,90 @@ impl Game {
         }
     }
 
-    // Run when arrow keys are pressed
+    // Handle key press events for every game state
     pub fn key_pressed(&mut self, key: Key) {
-        // TODO: Change to work with other game states
-        if let GameState::GameOver = self.game_state {
-            return;
-        }
-
-        // Add key bindings
-        let dir = match key {
-            Key::Up => Some(Direction::Up),
-            Key::Down => Some(Direction::Down),
-            Key::Left => Some(Direction::Left),
-            Key::Right => Some(Direction::Right),
-            Key::Escape => {
-                // End current game
-                self.game_state = match self.game_state {
-                    // Ignore if already in main menu
-                    GameState::MainMenu => GameState::MainMenu,
-                    _ => GameState::GameOver,
+        // TODO: Finish implementing key bindings for all game states
+        match self.game_state {
+            // Handle main menu key presses
+            GameState::MainMenu => match key {
+                // Navigate through menu options
+                Key::Up => {}
+                Key::Down => {}
+                Key::Right => {}
+                Key::Left => {}
+                Key::Return => {} // Select chosen option
+                _ => {} // NOTE: Add key bindings for Tab and Return to navigate and select settings
+            },
+            // Handle playing state key presses
+            GameState::Playing => {
+                // Add key bindings
+                let dir = match key {
+                    Key::Up => Some(Direction::Up),
+                    Key::Down => Some(Direction::Down),
+                    Key::Left => Some(Direction::Left),
+                    Key::Right => Some(Direction::Right),
+                    Key::P => {
+                        // End current game
+                        self.game_state = GameState::Paused;
+                        None
+                    }
+                    Key::S => {
+                        // Go to settings
+                        self.game_state = GameState::Settings;
+                        None
+                    }
+                    _ => None,
                 };
-                None
+
+                // If new direction is opposite of current direction, ignore it
+                if dir.unwrap() == self.snake.head_direction().opposite() {
+                    return;
+                }
+
+                self.update_snake(dir);
             }
-            _ => None,
-        };
-
-        if dir.unwrap() == self.snake.head_direction().opposite() {
-            return;
+            // Handle paused state key presses
+            GameState::Paused => match key {
+                // Navigate through menu options
+                Key::Up => {}
+                Key::Down => {}
+                Key::Right => {}
+                Key::Left => {}
+                Key::Return => {} // Select chosen option
+                Key::P => {
+                    // Resume game
+                    self.game_state = GameState::Playing;
+                }
+                _ => {}
+            },
+            // Handle game over state key presses
+            GameState::GameOver => match key {
+                // Navigate through menu options
+                Key::Up => {}
+                Key::Down => {}
+                Key::Right => {}
+                Key::Left => {}
+                Key::Return => {
+                    // Restart game
+                    self.restart();
+                }
+                _ => {}
+            },
+            // Handle settings state key presses
+            GameState::Settings => match key {
+                // Navigate through menu options
+                Key::Up => {}
+                Key::Down => {}
+                Key::Right => {}
+                Key::Left => {}
+                Key::Return => {} // Select chosen option
+                _ => {}
+            },
         }
-
-        self.update_snake(dir);
     }
 
     // Draw game board
-    pub fn draw(&self, con: &Context, g: &mut G2d) {
+    pub fn draw_game_board(&self, con: &Context, g: &mut G2d) {
         // Draw the snake
         self.snake.draw(con, g);
 
@@ -117,32 +168,62 @@ impl Game {
             con,
             g,
         );
+    }
 
-        // Draw pause screen overlay over game board
-        if let GameState::Paused = self.game_state {
-            draw_rectangle(
-                PAUSE_COLOR,
-                0,
-                0,
-                self.board_width,
-                self.board_height,
-                con,
-                g,
-            );
-        }
+    // Draw pause screen
+    pub fn draw_pause(&self, con: &Context, g: &mut G2d) {
+        draw_rectangle(
+            PAUSE_COLOR, // Background color
+            0,
+            0,
+            self.board_width,
+            self.board_height,
+            con,
+            g,
+        );
+        // NOTE: Draw pause text or options here
+    }
 
-        // Draw gameover screen
-        if let GameState::GameOver = self.game_state {
-            draw_rectangle(
-                GAMEOVER_COLOR,
-                0,
-                0,
-                self.board_width,
-                self.board_height,
-                con,
-                g,
-            );
-        }
+    // Draw settings screen
+    pub fn draw_settings(&self, con: &Context, g: &mut G2d) {
+        draw_rectangle(
+            MENU_COLOR, // Background color
+            0,
+            0,
+            self.board_width,
+            self.board_height,
+            con,
+            g,
+        );
+        // NOTE: Draw settings options, controls, etc.
+    }
+
+    // Draw game over screen
+    pub fn draw_game_over(&self, con: &Context, g: &mut G2d) {
+        draw_rectangle(
+            GAMEOVER_COLOR, // Background color
+            0,
+            0,
+            self.board_width,
+            self.board_height,
+            con,
+            g,
+        );
+        // NOTE: Draw game over text
+    }
+
+    // Draw main menu
+    pub fn draw_main_menu(&self, con: &Context, g: &mut G2d) {
+        // NOTE: Implement main menu drawing logic here
+        draw_rectangle(
+            MENU_COLOR, // Background color
+            0,
+            0,
+            self.board_width,
+            self.board_height,
+            con,
+            g,
+        );
     }
 
     // Update game state over time
@@ -168,11 +249,6 @@ impl Game {
     // Get current game state
     pub fn get_game_state(&self) -> GameState {
         self.game_state.clone()
-    }
-
-    // Change game state
-    pub fn change_game_state(&mut self, new_state: GameState) {
-        self.game_state = new_state;
     }
 
     // Check if snake has eaten food
