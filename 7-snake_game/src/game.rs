@@ -1,16 +1,19 @@
-use crate::draw::{draw_block, draw_rectangle};
+use crate::draw::{draw_block, draw_button, draw_screen};
 use crate::snake::{Direction, Snake};
 
 use piston_window::CharacterCache;
 use piston_window::{Context, G2d, Glyphs, Key, Text, Transformed, types::Color};
 use rand::{Rng, rng};
 
-const FOOD_COLOR: Color = [0.80, 0.00, 0.00, 1.0]; // Food's RGB color
-const BORDER_COLOR: Color = [0.00, 0.00, 0.00, 1.0]; // Border's RGB color
-const GAMEOVER_COLOR: Color = [0.90, 0.00, 0.00, 0.5]; // Gameover's RGB color
+const FOOD_COLOR: Color = [0.8, 0.0, 0.0, 1.0]; // Food's RGB color
+const BORDER_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Border's RGB color
+const GAMEOVER_COLOR: Color = [0.9, 0.0, 0.0, 0.5]; // Gameover's RGB color
 const PAUSE_COLOR: Color = [0.0, 0.0, 0.0, 0.5]; // Pause screen overlay RGB color
 const MENU_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Settings screen RGB color
-const FONT_COLOR: Color = [1.0, 1.0, 1.0, 1.0]; // Font color for text rendering
+const FONT_DEFAULT_COLOR: Color = [1.0, 1.0, 1.0, 1.0]; // Default font color
+const FONT_SELECTED_COLOR: Color = [0.7, 0.0, 0.0, 1.0]; // Selected font color
+const BUTTON_SELECTED_COLOR: Color = [0.0, 0.8, 0.5, 1.0]; // Selected button color
+const BUTTON_DEFAULT_COLOR: Color = [0.0, 0.0, 0.0, 0.0]; // Unselected button color
 
 const BLOCK_SIZE: f64 = 25.0; // Size of each block in pixels
 
@@ -38,6 +41,8 @@ pub struct Game {
 
     game_state: GameState,
 
+    main_menu_selected: usize, // Index of selected menu item in main menu,
+    // NOTE: Add more fields for pause (quit/resume game, go to settings) and settings (difficulty, controls, etc.)
     waiting_time: f64,
 }
 
@@ -55,6 +60,8 @@ impl Game {
 
             game_state: GameState::MainMenu,
 
+            main_menu_selected: 0, // Start with first menu item selected
+
             waiting_time: 0.0,
         }
     }
@@ -66,12 +73,49 @@ impl Game {
             // Handle main menu key presses
             GameState::MainMenu => match key {
                 // Navigate through menu options
-                Key::Up => {}
-                Key::Down => {}
-                Key::Right => {}
-                Key::Left => {}
-                Key::Return => {} // Select chosen option
-                _ => {} // NOTE: Add key bindings for Tab and Return to navigate and select settings
+                Key::Up => {
+                    if self.main_menu_selected > 0 {
+                        self.main_menu_selected -= 1;
+                    }
+                }
+                Key::Down => {
+                    if self.main_menu_selected < 2 {
+                        // NOTE: Assuming 3 menu options
+                        self.main_menu_selected += 1;
+                    }
+                }
+                Key::Right => {
+                    // Alternative to Down key for navigating through options
+                    if self.main_menu_selected < 2 {
+                        // NOTE: Assuming 3 menu options
+                        self.main_menu_selected += 1;
+                    }
+                }
+                Key::Left => {
+                    // Alternative to Up key for navigating through options
+                    if self.main_menu_selected > 0 {
+                        self.main_menu_selected -= 1;
+                    }
+                }
+                Key::Return => {
+                    // Select chosen option
+                    match self.main_menu_selected {
+                        0 => {
+                            // Start game
+                            self.game_state = GameState::Playing;
+                        }
+                        1 => {
+                            // Go to settings
+                            self.game_state = GameState::Settings;
+                        }
+                        2 => {
+                            // Quit game
+                            std::process::exit(0);
+                        }
+                        _ => {}
+                    }
+                }
+                _ => {}
             },
             // Handle playing state key presses
             GameState::Playing => {
@@ -152,8 +196,8 @@ impl Game {
         }
 
         // Draw the border
-        draw_rectangle(BORDER_COLOR, 0, 0, self.board_width, 1, con, g);
-        draw_rectangle(
+        draw_screen(BORDER_COLOR, 0, 0, self.board_width, 1, con, g);
+        draw_screen(
             BORDER_COLOR,
             0,
             self.board_height - 1,
@@ -162,8 +206,8 @@ impl Game {
             con,
             g,
         );
-        draw_rectangle(BORDER_COLOR, 0, 0, 1, self.board_height, con, g);
-        draw_rectangle(
+        draw_screen(BORDER_COLOR, 0, 0, 1, self.board_height, con, g);
+        draw_screen(
             BORDER_COLOR,
             self.board_width - 1,
             0,
@@ -176,7 +220,7 @@ impl Game {
 
     // Draw pause screen
     pub fn draw_pause(&self, con: &Context, g: &mut G2d) {
-        draw_rectangle(
+        draw_screen(
             PAUSE_COLOR, // Background color
             0,
             0,
@@ -190,7 +234,7 @@ impl Game {
 
     // Draw settings screen
     pub fn draw_settings(&self, con: &Context, g: &mut G2d) {
-        draw_rectangle(
+        draw_screen(
             MENU_COLOR, // Background color
             0,
             0,
@@ -204,7 +248,7 @@ impl Game {
 
     // Draw game over screen
     pub fn draw_game_over(&self, con: &Context, g: &mut G2d) {
-        draw_rectangle(
+        draw_screen(
             GAMEOVER_COLOR, // Background color
             0,
             0,
@@ -223,8 +267,9 @@ impl Game {
         g: &mut G2d,
         title_glyphs: &mut Glyphs,
         text_glyphs: &mut Glyphs,
+        button_glyphs: &mut Glyphs,
     ) {
-        draw_rectangle(
+        draw_screen(
             MENU_COLOR, // Background color
             0,
             0,
@@ -244,7 +289,7 @@ impl Game {
         let title_y = 80.0; // Position from the top
 
         // Draw title text
-        Text::new_color(FONT_COLOR, title_font_size)
+        Text::new_color(FONT_DEFAULT_COLOR, title_font_size)
             .draw(
                 title,
                 title_glyphs,
@@ -264,7 +309,7 @@ impl Game {
         let intro_y = 100.0; // Position from the top
 
         // Draw intro text
-        Text::new_color(FONT_COLOR, intro_font_size)
+        Text::new_color(FONT_DEFAULT_COLOR, intro_font_size)
             .draw(
                 intro,
                 text_glyphs,
@@ -273,6 +318,62 @@ impl Game {
                 g,
             )
             .unwrap();
+
+        // Draw menu options as buttons
+        let menu_options = ["Start Game", "Settings", "Quit"];
+        let option_font_size = 16;
+
+        // Calculate button dimensions and positions
+        let button_height = 40.0; // Height for each menu button
+        let button_width = 150.0; // Width for each menu button
+        let start_y = 200.0; // Starting position for menu buttons
+
+        // Loop through menu options and draw them as buttons
+        for (i, option) in menu_options.iter().enumerate() {
+            // Calculate option width dynamically
+            let button_x = (self.board_width as f64 * BLOCK_SIZE - button_width) / 2.0;
+            let button_y = start_y + i as f64 * (button_height + 10.0);
+
+            // Highlight selected option.
+            let button_color = if i == self.main_menu_selected {
+                BUTTON_SELECTED_COLOR // Highlight color for selected button
+            } else {
+                BUTTON_DEFAULT_COLOR // Default color for unselected buttons
+            };
+
+            // Draw option background rectangle to represent button
+            draw_button(
+                button_color,
+                button_x,
+                button_y,
+                button_width,
+                button_height,
+                con,
+                g,
+            );
+
+            // Center button text
+            let option_width = button_glyphs.width(option_font_size, option).unwrap_or(0.0);
+            let option_x = button_x + (button_width - option_width) / 2.0;
+            let option_y = button_y + button_height / 2.0 + option_font_size as f64 / 2.5;
+
+            let option_color = if i == self.main_menu_selected {
+                FONT_SELECTED_COLOR // Highlight color for selected option
+            } else {
+                FONT_DEFAULT_COLOR // Default font color
+            };
+
+            // Draw each menu option
+            Text::new_color(option_color, option_font_size)
+                .draw(
+                    option,
+                    button_glyphs,
+                    &con.draw_state,
+                    con.transform.trans(option_x, option_y),
+                    g,
+                )
+                .unwrap();
+        }
     }
 
     // Update game state over time
