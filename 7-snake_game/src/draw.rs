@@ -10,6 +10,7 @@ pub fn to_coord_u32(game_coord: i32) -> u32 {
     to_coord(game_coord) as u32
 }
 
+// Draw blocks for snake body and food
 pub fn draw_block(color: Color, x: i32, y: i32, con: &Context, g: &mut G2d) {
     let gui_x = to_coord(x);
     let gui_y = to_coord(y);
@@ -22,7 +23,8 @@ pub fn draw_block(color: Color, x: i32, y: i32, con: &Context, g: &mut G2d) {
     );
 }
 
-pub fn draw_rectangle(
+// Draw screen
+pub fn draw_screen(
     color: Color,
     x: i32,
     y: i32,
@@ -45,4 +47,17 @@ pub fn draw_rectangle(
         con.transform,
         g,
     );
+}
+
+// Draw screen buttons
+pub fn draw_button(
+    color: Color,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+    con: &Context,
+    g: &mut G2d,
+) {
+    rectangle(color, [x, y, width, height], con.transform, g);
 }
