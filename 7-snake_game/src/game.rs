@@ -1,6 +1,7 @@
 use crate::draw::{draw_block, draw_rectangle};
 use crate::snake::{Direction, Snake};
 
+use piston_window::CharacterCache;
 use piston_window::{Context, G2d, Glyphs, Key, Text, Transformed, types::Color};
 use rand::{Rng, rng};
 
@@ -10,6 +11,8 @@ const GAMEOVER_COLOR: Color = [0.90, 0.00, 0.00, 0.5]; // Gameover's RGB color
 const PAUSE_COLOR: Color = [0.0, 0.0, 0.0, 0.5]; // Pause screen overlay RGB color
 const MENU_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Settings screen RGB color
 const FONT_COLOR: Color = [1.0, 1.0, 1.0, 1.0]; // Font color for text rendering
+
+const BLOCK_SIZE: f64 = 25.0; // Size of each block in pixels
 
 const MOVING_PERIOD: f64 = 0.1; // Snake's FPS. Current speed is 10 FPS
 const RESTART_TIME: f64 = 1.0; // Time to restart game after gameover
@@ -214,8 +217,13 @@ impl Game {
     }
 
     // Draw main menu
-    pub fn draw_main_menu(&self, con: &Context, g: &mut G2d, glyphs: &mut Glyphs) {
-        // NOTE: Implement main menu drawing logic here
+    pub fn draw_main_menu(
+        &self,
+        con: &Context,
+        g: &mut G2d,
+        title_glyphs: &mut Glyphs,
+        text_glyphs: &mut Glyphs,
+    ) {
         draw_rectangle(
             MENU_COLOR, // Background color
             0,
@@ -225,13 +233,43 @@ impl Game {
             con,
             g,
         );
-        // NOTE: Confirm that color is correct
-        Text::new_color(FONT_COLOR, 24)
+
+        // Calculate parameters for drawing title
+        let title = "Snake Game";
+        let title_font_size = 32;
+        let title_width = title_glyphs.width(title_font_size, title).unwrap_or(0.0);
+
+        // Calculate title text position for centering
+        let title_x = (self.board_width as f64 * BLOCK_SIZE - title_width) / 2.0;
+        let title_y = 80.0; // Position from the top
+
+        // Draw title text
+        Text::new_color(FONT_COLOR, title_font_size)
             .draw(
-                "Snake",
-                glyphs,
+                title,
+                title_glyphs,
                 &con.draw_state,
-                con.transform.trans(100.0, 100.0),
+                con.transform.trans(title_x, title_y),
+                g,
+            )
+            .unwrap();
+
+        // Calculate parameters for drawing intro text
+        let intro = "Classic Snake Game written in Rust";
+        let intro_font_size = 12;
+        let intro_width = text_glyphs.width(intro_font_size, intro).unwrap_or(0.0);
+
+        // Calculate intro text position for centering
+        let intro_x = (self.board_width as f64 * BLOCK_SIZE - intro_width) / 2.0;
+        let intro_y = 100.0; // Position from the top
+
+        // Draw intro text
+        Text::new_color(FONT_COLOR, intro_font_size)
+            .draw(
+                intro,
+                text_glyphs,
+                &con.draw_state,
+                con.transform.trans(intro_x, intro_y),
                 g,
             )
             .unwrap();

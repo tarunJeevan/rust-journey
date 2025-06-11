@@ -37,8 +37,13 @@ fn main() {
     let assets = find_folder::Search::ParentsThenKids(3, 3)
         .for_folder("assets")
         .unwrap();
-    let font_path = &assets.join("FiraCode-Bold.ttf");
-    let mut glyphs = window.load_font(font_path).unwrap();
+    let font_bold = &assets.join("FiraCode-Bold.ttf");
+    let font_light = &assets.join("FiraCode-Light.ttf");
+    let font_regular = &assets.join("FiraCode-Regular.ttf");
+
+    let mut glyphs_bold = window.load_font(font_bold).unwrap();
+    let mut glyphs_light = window.load_font(font_light).unwrap();
+    let mut glyphs_regular = window.load_font(font_regular).unwrap();
 
     while let Some(event) = window.next() {
         // Use match to handle all game states
@@ -47,9 +52,10 @@ fn main() {
                 // Draw main menu
                 window.draw_2d(&event, |c, g, device| {
                     clear(BACK_COLOR, g);
-                    game.draw_main_menu(&c, g, &mut glyphs);
+                    game.draw_main_menu(&c, g, &mut glyphs_bold, &mut glyphs_light);
                     // Flush glyphs to the device
-                    glyphs.factory.encoder.flush(device);
+                    glyphs_bold.factory.encoder.flush(device);
+                    glyphs_light.factory.encoder.flush(device);
                 });
 
                 if let Some(Button::Keyboard(key)) = event.press_args() {
