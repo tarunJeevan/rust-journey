@@ -7,11 +7,13 @@ use rand::{Rng, rng};
 
 const FOOD_COLOR: Color = [0.8, 0.0, 0.0, 1.0]; // Food's RGB color
 const BORDER_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Border's RGB color
+const GAME_BOARD_COLOR: Color = [0.5, 0.5, 0.5, 1.0]; // Game board background color
 const GAMEOVER_COLOR: Color = [0.9, 0.0, 0.0, 0.5]; // Gameover's RGB color
 const PAUSE_COLOR: Color = [0.0, 0.0, 0.0, 0.5]; // Pause screen overlay RGB color
 const MENU_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Settings screen RGB color
 const FONT_DEFAULT_COLOR: Color = [1.0, 1.0, 1.0, 1.0]; // Default font color
-const FONT_SELECTED_COLOR: Color = [0.7, 0.0, 0.0, 1.0]; // Selected font color
+const MAIN_MENU_FONT_SELECTED_COLOR: Color = [0.7, 0.0, 0.0, 1.0]; // Selected font color for main menu
+const GAMEOVER_FONT_SELECTED_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Selected font color in game over screen
 const BUTTON_SELECTED_COLOR: Color = [0.0, 0.8, 0.5, 1.0]; // Selected button color
 const BUTTON_DEFAULT_COLOR: Color = [0.0, 0.0, 0.0, 0.0]; // Unselected button color
 
@@ -41,7 +43,9 @@ pub struct Game {
 
     game_state: GameState,
 
-    main_menu_selected: usize, // Index of selected menu item in main menu,
+    main_menu_selected: usize, // Index of selected menu item in main menu
+    game_over_selected: usize, // Index of selected menu item in game over screen
+    pause_selected: usize,     // Index of selected menu item in pause screen
     // NOTE: Add more fields for pause (quit/resume game, go to settings) and settings (difficulty, controls, etc.)
     waiting_time: f64,
 }
@@ -60,7 +64,9 @@ impl Game {
 
             game_state: GameState::MainMenu, // Start with main menu
 
-            main_menu_selected: 0, // Start with first menu item selected
+            main_menu_selected: 0, // Start with first option selected in main menu
+            game_over_selected: 0, // Start with first option selected in game over screen
+            pause_selected: 0,     // Start with first option selected in pause screen
 
             waiting_time: 0.0,
         }
@@ -101,8 +107,8 @@ impl Game {
                     // Select chosen option
                     match self.main_menu_selected {
                         0 => {
-                            // Start game
-                            self.game_state = GameState::Playing;
+                            // Start new game
+                            self.restart();
                         }
                         1 => {
                             // Go to settings
@@ -118,40 +124,78 @@ impl Game {
                 _ => {}
             },
             // Handle playing state key presses
-            GameState::Playing => {
-                // Add key bindings
-                let dir = match key {
-                    Key::Up => Some(Direction::Up),
-                    Key::Down => Some(Direction::Down),
-                    Key::Left => Some(Direction::Left),
-                    Key::Right => Some(Direction::Right),
-                    Key::P => {
-                        // End current game
-                        self.game_state = GameState::Paused;
-                        None
+            GameState::Playing => match key {
+                Key::Up => {
+                    // Move snake up unless it is already moving down
+                    if self.snake.head_direction().opposite() != Direction::Up {
+                        self.update_snake(Some(Direction::Up));
                     }
-                    Key::S => {
-                        // Go to settings
-                        self.game_state = GameState::Settings;
-                        None
-                    }
-                    _ => None,
-                };
-
-                // If new direction is opposite of current direction, ignore it
-                if dir.unwrap() == self.snake.head_direction().opposite() {
-                    return;
                 }
-                self.update_snake(dir);
-            }
+                Key::Down => {
+                    // Move snake down unless it is already moving up
+                    if self.snake.head_direction().opposite() != Direction::Down {
+                        self.update_snake(Some(Direction::Down));
+                    }
+                }
+                Key::Left => {
+                    // Move snake left unless it is already moving right
+                    if self.snake.head_direction().opposite() != Direction::Left {
+                        self.update_snake(Some(Direction::Left));
+                    }
+                }
+                Key::Right => {
+                    // Move snake right unless it is already moving left
+                    if self.snake.head_direction().opposite() != Direction::Right {
+                        self.update_snake(Some(Direction::Right));
+                    }
+                }
+                Key::P => {
+                    // Pause current game
+                    self.game_state = GameState::Paused;
+                }
+                _ => {}
+            },
             // Handle paused state key presses
             GameState::Paused => match key {
                 // Navigate through menu options
-                Key::Up => {}
-                Key::Down => {}
-                Key::Right => {}
-                Key::Left => {}
-                Key::Return => {} // Select chosen option
+                Key::Up => {
+                    if self.pause_selected > 0 {
+                        self.pause_selected -= 1;
+                    }
+                }
+                Key::Down => {
+                    if self.pause_selected < 1 {
+                        // NOTE: Assuming 2 menu options
+                        self.pause_selected += 1;
+                    }
+                }
+                Key::Right => {
+                    // Alternative to Down key for navigating through options
+                    if self.pause_selected < 1 {
+                        // NOTE: Assuming 2 menu options
+                        self.pause_selected += 1;
+                    }
+                }
+                Key::Left => {
+                    // Alternative to Up key for navigating through options
+                    if self.pause_selected > 0 {
+                        self.pause_selected -= 1;
+                    }
+                }
+                Key::Return => {
+                    // Select chosen option
+                    match self.pause_selected {
+                        0 => {
+                            // Go to main menu
+                            self.game_state = GameState::MainMenu;
+                        }
+                        1 => {
+                            // Quit game
+                            std::process::exit(0);
+                        }
+                        _ => {}
+                    }
+                }
                 Key::P => {
                     // Resume game
                     self.game_state = GameState::Playing;
@@ -161,13 +205,51 @@ impl Game {
             // Handle game over state key presses
             GameState::GameOver => match key {
                 // Navigate through menu options
-                Key::Up => {}
-                Key::Down => {}
-                Key::Right => {}
-                Key::Left => {}
+                Key::Up => {
+                    if self.game_over_selected > 0 {
+                        self.game_over_selected -= 1;
+                    }
+                }
+                Key::Down => {
+                    if self.game_over_selected < 3 {
+                        // NOTE: Assuming 4 menu options
+                        self.game_over_selected += 1;
+                    }
+                }
+                Key::Right => {
+                    // Alternative to Down key for navigating through options
+                    if self.game_over_selected < 3 {
+                        // NOTE: Assuming 4 menu options
+                        self.game_over_selected += 1;
+                    }
+                }
+                Key::Left => {
+                    // Alternative to Up key for navigating through options
+                    if self.game_over_selected > 0 {
+                        self.game_over_selected -= 1;
+                    }
+                }
                 Key::Return => {
-                    // Restart game
-                    self.restart();
+                    // Select chosen option
+                    match self.game_over_selected {
+                        0 => {
+                            // Restart game
+                            self.restart();
+                        }
+                        1 => {
+                            // Return to main menu
+                            self.game_state = GameState::MainMenu;
+                        }
+                        2 => {
+                            // Go to settings
+                            self.game_state = GameState::Settings;
+                        }
+                        3 => {
+                            // Quit game
+                            std::process::exit(0);
+                        }
+                        _ => {}
+                    }
                 }
                 _ => {}
             },
@@ -186,6 +268,16 @@ impl Game {
 
     // Draw game board
     pub fn draw_game_board(&self, con: &Context, g: &mut G2d) {
+        // Draw background
+        draw_screen(
+            GAME_BOARD_COLOR, // Background color
+            0,
+            0,
+            self.board_width,
+            self.board_height,
+            con,
+            g,
+        );
         // Draw the snake
         self.snake.draw(con, g);
 
@@ -218,7 +310,17 @@ impl Game {
     }
 
     // Draw pause screen
-    pub fn draw_pause(&self, con: &Context, g: &mut G2d) {
+    pub fn draw_pause(
+        &self,
+        con: &Context,
+        g: &mut G2d,
+        title_glyphs: &mut Glyphs,
+        text_glyphs: &mut Glyphs,
+        button_glyphs: &mut Glyphs,
+    ) {
+        // Draw game board
+        self.draw_game_board(con, g);
+        // Draw pause overlay
         draw_screen(
             PAUSE_COLOR, // Background color
             0,
@@ -228,7 +330,102 @@ impl Game {
             con,
             g,
         );
-        // NOTE: Draw pause text or options here
+
+        // Calculate parameters for drawing title
+        let title = "Paused";
+        let title_font_size = 48;
+        let title_width = title_glyphs.width(title_font_size, title).unwrap_or(0.0);
+
+        // Calculate title text position for centering
+        let title_x = (self.board_width as f64 * BLOCK_SIZE - title_width) / 2.0;
+        let title_y = 80.0; // Position from the top
+
+        // Draw title text
+        Text::new_color(FONT_DEFAULT_COLOR, title_font_size)
+            .draw(
+                title,
+                title_glyphs,
+                &con.draw_state,
+                con.transform.trans(title_x, title_y),
+                g,
+            )
+            .unwrap();
+
+        // Calculate parameters for drawing intro text
+        let intro = "Press 'P' to resume game";
+        let intro_font_size = 12;
+        let intro_width = text_glyphs.width(intro_font_size, intro).unwrap_or(0.0);
+
+        // Calculate intro text position for centering
+        let intro_x = (self.board_width as f64 * BLOCK_SIZE - intro_width) / 2.0;
+        let intro_y = 100.0; // Position from the top
+
+        // Draw intro text
+        Text::new_color(FONT_DEFAULT_COLOR, intro_font_size)
+            .draw(
+                intro,
+                text_glyphs,
+                &con.draw_state,
+                con.transform.trans(intro_x, intro_y),
+                g,
+            )
+            .unwrap();
+
+        // Draw menu options as buttons
+        let menu_options = ["Main Menu", "Quit"];
+        let option_font_size = 16;
+
+        // Calculate button dimensions and positions
+        let button_height = 40.0; // Height for each menu button
+        let button_width = 150.0; // Width for each menu button
+        let start_y = 200.0; // Starting position for menu buttons
+
+        // Loop through menu options and draw them as buttons
+        for (i, option) in menu_options.iter().enumerate() {
+            // Calculate option width dynamically
+            let button_x = (self.board_width as f64 * BLOCK_SIZE - button_width) / 2.0;
+            let button_y = start_y + i as f64 * (button_height + 10.0);
+
+            // Highlight selected option.
+            let button_color = if i == self.pause_selected {
+                BUTTON_SELECTED_COLOR // Highlight color for selected button
+            } else {
+                BUTTON_DEFAULT_COLOR // Default color for unselected buttons
+            };
+
+            // Draw option background rectangle to represent button
+            draw_button(
+                button_color,
+                button_x,
+                button_y,
+                button_width,
+                button_height,
+                con,
+                g,
+            );
+
+            // Center button text
+            let option_width = button_glyphs.width(option_font_size, option).unwrap_or(0.0);
+            let option_x = button_x + (button_width - option_width) / 2.0;
+            let option_y = button_y + button_height / 2.0 + option_font_size as f64 / 2.5;
+
+            let option_color = if i == self.pause_selected {
+                MAIN_MENU_FONT_SELECTED_COLOR // Highlight color for selected option
+            } else {
+                FONT_DEFAULT_COLOR // Default font color
+            };
+
+            // Draw each menu option
+            Text::new_color(option_color, option_font_size)
+                .draw(
+                    option,
+                    button_glyphs,
+                    &con.draw_state,
+                    con.transform.trans(option_x, option_y),
+                    g,
+                )
+                .unwrap();
+        }
     }
 
     // Draw settings screen
@@ -243,10 +440,17 @@ impl Game {
             g,
         );
         // NOTE: Draw settings options, controls, etc.
+        // NOTE: Settings options should end in "Return to Main Menu"
     }
 
     // Draw game over screen
-    pub fn draw_game_over(&self, con: &Context, g: &mut G2d) {
+    pub fn draw_game_over(
+        &self,
+        con: &Context,
+        g: &mut G2d,
+        title_glyphs: &mut Glyphs,
+        button_glyphs: &mut Glyphs,
+    ) {
         draw_screen(
             GAMEOVER_COLOR, // Background color
             0,
@@ -256,7 +460,81 @@ impl Game {
             con,
             g,
         );
-        // NOTE: Draw game over text
+        // Calculate parameters for drawing title
+        let title = "Game Over";
+        let title_font_size = 48;
+        let title_width = title_glyphs.width(title_font_size, title).unwrap_or(0.0);
+
+        // Calculate title text position for centering
+        let title_x = (self.board_width as f64 * BLOCK_SIZE - title_width) / 2.0;
+        let title_y = 80.0; // Position from the top
+
+        // Draw title text
+        Text::new_color(FONT_DEFAULT_COLOR, title_font_size)
+            .draw(
+                title,
+                title_glyphs,
+                &con.draw_state,
+                con.transform.trans(title_x, title_y),
+                g,
+            )
+            .unwrap();
+
+        // Draw menu options as buttons
+        let menu_options = ["Restart", "Main Menu", "Settings", "Quit"];
+        let option_font_size = 16;
+
+        // Calculate button dimensions and positions
+        let button_height = 40.0; // Height for each menu button
+        let button_width = 150.0; // Width for each menu button
+        let start_y = 200.0; // Starting position for menu buttons
+
+        // Loop through menu options and draw them as buttons
+        for (i, option) in menu_options.iter().enumerate() {
+            // Calculate option width dynamically
+            let button_x = (self.board_width as f64 * BLOCK_SIZE - button_width) / 2.0;
+            let button_y = start_y + i as f64 * (button_height + 10.0);
+
+            // Highlight selected option.
+            let button_color = if i == self.game_over_selected {
+                BUTTON_SELECTED_COLOR // Highlight color for selected button
+            } else {
+                BUTTON_DEFAULT_COLOR // Default color for unselected buttons
+            };
+
+            // Draw option background rectangle to represent button
+            draw_button(
+                button_color,
+                button_x,
+                button_y,
+                button_width,
+                button_height,
+                con,
+                g,
+            );
+
+            // Center button text
+            let option_width = button_glyphs.width(option_font_size, option).unwrap_or(0.0);
+            let option_x = button_x + (button_width - option_width) / 2.0;
+            let option_y = button_y + button_height / 2.0 + option_font_size as f64 / 2.5;
+
+            let option_color = if i == self.game_over_selected {
+                GAMEOVER_FONT_SELECTED_COLOR // Highlight color for selected option
+            } else {
+                FONT_DEFAULT_COLOR // Default font color
+            };
+
+            // Draw each menu option
+            Text::new_color(option_color, option_font_size)
+                .draw(
+                    option,
+                    button_glyphs,
+                    &con.draw_state,
+                    con.transform.trans(option_x, option_y),
+                    g,
+                )
+                .unwrap();
+        }
     }
 
     // Draw main menu
@@ -357,7 +635,7 @@ impl Game {
             let option_y = button_y + button_height / 2.0 + option_font_size as f64 / 2.5;
 
             let option_color = if i == self.main_menu_selected {
-                FONT_SELECTED_COLOR // Highlight color for selected option
+                MAIN_MENU_FONT_SELECTED_COLOR // Highlight color for selected option
             } else {
                 FONT_DEFAULT_COLOR // Default font color
             };
@@ -462,6 +740,9 @@ impl Game {
         self.food_exists = true;
         self.food_x = 6;
         self.food_y = 4;
-        self.game_state = GameState::MainMenu;
+        self.game_state = GameState::Playing;
+        self.main_menu_selected = 0;
+        self.game_over_selected = 0;
+        self.pause_selected = 0;
     }
 }

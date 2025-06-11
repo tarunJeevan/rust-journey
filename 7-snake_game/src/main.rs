@@ -73,7 +73,6 @@ fn main() {
             GameState::Playing => {
                 // Draw game board
                 window.draw_2d(&event, |c, g, _| {
-                    clear(BACK_COLOR, g);
                     game.draw_game_board(&c, g);
                 });
                 // Handle playing state logic
@@ -87,9 +86,18 @@ fn main() {
             }
             GameState::Paused => {
                 // Draw pause screen
-                window.draw_2d(&event, |c, g, _| {
-                    clear(BACK_COLOR, g);
-                    game.draw_pause(&c, g);
+                window.draw_2d(&event, |c, g, device| {
+                    game.draw_pause(
+                        &c,
+                        g,
+                        &mut glyphs_bold,
+                        &mut glyphs_light,
+                        &mut glyphs_regular,
+                    );
+                    // Flush glyphs to the device
+                    glyphs_bold.factory.encoder.flush(device);
+                    glyphs_light.factory.encoder.flush(device);
+                    glyphs_regular.factory.encoder.flush(device);
                 });
                 // Handle playing state logic
                 if let Some(Button::Keyboard(key)) = event.press_args() {
@@ -98,9 +106,12 @@ fn main() {
             }
             GameState::GameOver => {
                 // Draw game over screen
-                window.draw_2d(&event, |c, g, _| {
+                window.draw_2d(&event, |c, g, device| {
                     clear(BACK_COLOR, g);
-                    game.draw_game_over(&c, g);
+                    game.draw_game_over(&c, g, &mut glyphs_bold, &mut glyphs_regular);
+                    // Flush glyphs to the device
+                    glyphs_bold.factory.encoder.flush(device);
+                    glyphs_regular.factory.encoder.flush(device);
                 });
                 // Handle game over logic
                 if let Some(Button::Keyboard(key)) = event.press_args() {
