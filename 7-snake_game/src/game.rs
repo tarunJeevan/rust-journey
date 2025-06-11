@@ -58,7 +58,7 @@ impl Game {
             board_width,
             board_height,
 
-            game_over: false,
+            game_state: GameState::MainMenu, // Start with main menu
 
             main_menu_selected: 0, // Start with first menu item selected
 
@@ -374,12 +374,12 @@ impl Game {
                 .unwrap();
         }
     }
-  
+
     // Update game state over time
     pub fn update(&mut self, delta_time: f64) {
         self.waiting_time += delta_time;
 
-        if self.game_over {
+        if let GameState::GameOver = self.game_state {
             if self.waiting_time > RESTART_TIME {
                 self.restart();
             }
@@ -450,7 +450,7 @@ impl Game {
             self.snake.move_forward(dir);
             self.check_eating();
         } else {
-            self.game_over = true;
+            self.game_state = GameState::GameOver;
         }
         self.waiting_time = 0.0;
     }
@@ -462,6 +462,6 @@ impl Game {
         self.food_exists = true;
         self.food_x = 6;
         self.food_y = 4;
-        self.game_over = false;
+        self.game_state = GameState::MainMenu;
     }
 }
