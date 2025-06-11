@@ -1,7 +1,7 @@
 use crate::draw::{draw_block, draw_rectangle};
 use crate::snake::{Direction, Snake};
 
-use piston_window::{types::Color, *};
+use piston_window::{Context, G2d, Glyphs, Key, Text, Transformed, types::Color};
 use rand::{Rng, rng};
 
 const FOOD_COLOR: Color = [0.80, 0.00, 0.00, 1.0]; // Food's RGB color
@@ -9,6 +9,7 @@ const BORDER_COLOR: Color = [0.00, 0.00, 0.00, 1.0]; // Border's RGB color
 const GAMEOVER_COLOR: Color = [0.90, 0.00, 0.00, 0.5]; // Gameover's RGB color
 const PAUSE_COLOR: Color = [0.0, 0.0, 0.0, 0.5]; // Pause screen overlay RGB color
 const MENU_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Settings screen RGB color
+const FONT_COLOR: Color = [1.0, 1.0, 1.0, 1.0]; // Font color for text rendering
 
 const MOVING_PERIOD: f64 = 0.1; // Snake's FPS. Current speed is 10 FPS
 const RESTART_TIME: f64 = 1.0; // Time to restart game after gameover
@@ -213,7 +214,7 @@ impl Game {
     }
 
     // Draw main menu
-    pub fn draw_main_menu(&self, con: &Context, g: &mut G2d) {
+    pub fn draw_main_menu(&self, con: &Context, g: &mut G2d, glyphs: &mut Glyphs) {
         // NOTE: Implement main menu drawing logic here
         draw_rectangle(
             MENU_COLOR, // Background color
@@ -224,6 +225,16 @@ impl Game {
             con,
             g,
         );
+        // NOTE: Confirm that color is correct
+        Text::new_color(FONT_COLOR, 24)
+            .draw(
+                "Snake",
+                glyphs,
+                &con.draw_state,
+                con.transform.trans(100.0, 100.0),
+                g,
+            )
+            .unwrap();
     }
 
     // Update game state over time

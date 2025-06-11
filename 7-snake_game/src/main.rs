@@ -1,3 +1,4 @@
+extern crate find_folder;
 extern crate piston_window;
 extern crate rand;
 
@@ -5,7 +6,9 @@ mod draw;
 mod game;
 mod snake;
 
-use piston_window::{types::Color, *};
+use piston_window::{
+    Button, PistonWindow, PressEvent, UpdateEvent, WindowSettings, clear, types::Color,
+};
 
 use draw::to_coord_u32;
 use game::{Game, GameState};
@@ -30,14 +33,23 @@ fn main() {
 
     let mut game = Game::new(width, height);
 
+    // Load font for text rendering
+    let assets = find_folder::Search::ParentsThenKids(3, 3)
+        .for_folder("assets")
+        .unwrap();
+    let font_path = &assets.join("FiraCode-Bold.ttf");
+    let mut glyphs = window.load_font(font_path).unwrap();
+
     while let Some(event) = window.next() {
         // Use match to handle all game states
         match game.get_game_state() {
             GameState::MainMenu => {
                 // Draw main menu
-                window.draw_2d(&event, |c, g, _| {
+                window.draw_2d(&event, |c, g, device| {
                     clear(BACK_COLOR, g);
-                    game.draw_main_menu(&c, g);
+                    game.draw_main_menu(&c, g, &mut glyphs);
+                    // Flush glyphs to the device
+                    glyphs.factory.encoder.flush(device);
                 });
 
                 if let Some(Button::Keyboard(key)) = event.press_args() {
