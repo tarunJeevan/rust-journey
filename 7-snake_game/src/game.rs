@@ -58,7 +58,7 @@ impl Game {
             board_width,
             board_height,
 
-            game_state: GameState::MainMenu,
+            game_over: false,
 
             main_menu_selected: 0, // Start with first menu item selected
 
@@ -142,7 +142,6 @@ impl Game {
                 if dir.unwrap() == self.snake.head_direction().opposite() {
                     return;
                 }
-
                 self.update_snake(dir);
             }
             // Handle paused state key presses
@@ -375,12 +374,12 @@ impl Game {
                 .unwrap();
         }
     }
-
+  
     // Update game state over time
     pub fn update(&mut self, delta_time: f64) {
         self.waiting_time += delta_time;
 
-        if let GameState::GameOver = self.game_state {
+        if self.game_over {
             if self.waiting_time > RESTART_TIME {
                 self.restart();
             }
@@ -411,9 +410,9 @@ impl Game {
         }
     }
 
-    // Check snake collision. TODO: Fix to use GameState
+    // Check snake collision.
     fn check_if_snake_alive(&self, dir: Option<Direction>) -> bool {
-        let (next_x, next_y): (i32, i32) = self.snake.next_head(dir);
+        let (next_x, next_y) = self.snake.next_head(dir);
 
         // Check if head overlaps body
         if self.snake.overlap_body(next_x, next_y) {
@@ -451,7 +450,7 @@ impl Game {
             self.snake.move_forward(dir);
             self.check_eating();
         } else {
-            self.game_state = GameState::GameOver;
+            self.game_over = true;
         }
         self.waiting_time = 0.0;
     }
@@ -463,6 +462,6 @@ impl Game {
         self.food_exists = true;
         self.food_x = 6;
         self.food_y = 4;
-        self.game_state = GameState::Playing;
+        self.game_over = false;
     }
 }

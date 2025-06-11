@@ -11,7 +11,7 @@ use piston_window::{
 };
 
 use draw::to_coord_u32;
-use game::{Game, GameState};
+use game::Game;
 
 const BACK_COLOR: Color = [0.5, 0.5, 0.5, 1.0]; // Game board background color
 
