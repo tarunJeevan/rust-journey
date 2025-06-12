@@ -34,9 +34,9 @@ pub enum GameState {
 pub struct GameSettings {
     pub board_width: i32,
     pub board_height: i32,
-    // pub controls: String,    // e.g., "Arrow keys", "WASD". NOTE: Use enum?
-    pub wall_wrapping: bool, // Whether the snake can wrap around walls
-    pub snake_speed: f64,    // e.g., 0.1 for 10 FPS
+    pub key_bindings: KeyBindings, // e.g., "Arrow keys", "WASD".
+    pub wall_wrapping: bool,       // Whether the snake can wrap around walls
+    pub snake_speed: f64,          // e.g., 0.1 for 10 FPS
 }
 
 impl Default for GameSettings {
@@ -46,6 +46,28 @@ impl Default for GameSettings {
             board_height: 20,
             wall_wrapping: false,
             snake_speed: DEFAULT_SNAKE_SPEED,
+            key_bindings: KeyBindings::default(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct KeyBindings {
+    pub up: Key,
+    pub down: Key,
+    pub left: Key,
+    pub right: Key,
+    pub pause: Key,
+}
+
+impl Default for KeyBindings {
+    fn default() -> Self {
+        KeyBindings {
+            up: Key::Up,
+            down: Key::Down,
+            left: Key::Left,
+            right: Key::Right,
+            pause: Key::P,
         }
     }
 }
@@ -146,31 +168,31 @@ impl Game {
             },
             // Handle playing state key presses
             GameState::Playing => match key {
-                Key::Up => {
+                k if k == self.game_settings.key_bindings.up => {
                     // Move snake up unless it is already moving down
                     if self.snake.head_direction().opposite() != Direction::Up {
                         self.update_snake(Some(Direction::Up));
                     }
                 }
-                Key::Down => {
+                k if k == self.game_settings.key_bindings.down => {
                     // Move snake down unless it is already moving up
                     if self.snake.head_direction().opposite() != Direction::Down {
                         self.update_snake(Some(Direction::Down));
                     }
                 }
-                Key::Left => {
+                k if k == self.game_settings.key_bindings.left => {
                     // Move snake left unless it is already moving right
                     if self.snake.head_direction().opposite() != Direction::Left {
                         self.update_snake(Some(Direction::Left));
                     }
                 }
-                Key::Right => {
+                k if k == self.game_settings.key_bindings.right => {
                     // Move snake right unless it is already moving left
                     if self.snake.head_direction().opposite() != Direction::Right {
                         self.update_snake(Some(Direction::Right));
                     }
                 }
-                Key::P => {
+                k if k == self.game_settings.key_bindings.pause => {
                     // Pause current game
                     self.game_state = GameState::Paused;
                 }
