@@ -97,6 +97,17 @@ impl Snake {
         self.tail = self.body.pop_back();
     }
 
+    pub fn move_forward_to(&mut self, pos: (i32, i32), dir: Option<Direction>) {
+        if let Some(d) = dir {
+            self.direction = d;
+        }
+
+        let new_block = Block { x: pos.0, y: pos.1 };
+
+        self.body.push_front(new_block);
+        self.tail = self.body.pop_back();
+    }
+
     // Return a clone of the snake's direction
     pub fn head_direction(&self) -> Direction {
         self.direction
@@ -126,17 +137,11 @@ impl Snake {
         self.body.push_back(tail);
     }
 
-    // Check if snake's head overlaps with its body
+    // Check if snake's head overlaps with its body excluding the tail
     pub fn overlap_body(&self, x: i32, y: i32) -> bool {
-        let mut ch = 0;
-        for block in &self.body {
+        for block in self.body.iter().take(self.body.len().saturating_sub(1)) {
             if x == block.x && y == block.y {
                 return true;
-            }
-            // Avoid fail state when head overlaps with tail momentarily before tail moves
-            ch += 1;
-            if ch == self.body.len() - 1 {
-                break;
             }
         }
         false

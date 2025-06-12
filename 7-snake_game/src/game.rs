@@ -19,8 +19,7 @@ const BUTTON_DEFAULT_COLOR: Color = [0.0, 0.0, 0.0, 0.0]; // Unselected button c
 
 const BLOCK_SIZE: f64 = 25.0; // Size of each block in pixels
 
-const MOVING_PERIOD: f64 = 0.1; // Snake's FPS. Current speed is 10 FPS
-const RESTART_TIME: f64 = 1.0; // Time to restart game after gameover
+const DEFAULT_SNAKE_SPEED: f64 = 0.1; // Snake's FPS. Current speed is 10 FPS
 
 #[derive(Clone, Debug)]
 pub enum GameState {
@@ -29,6 +28,26 @@ pub enum GameState {
     Paused,
     GameOver,
     Settings,
+}
+
+#[derive(Clone)]
+pub struct GameSettings {
+    pub board_width: i32,
+    pub board_height: i32,
+    // pub controls: String,    // e.g., "Arrow keys", "WASD". NOTE: Use enum?
+    pub wall_wrapping: bool, // Whether the snake can wrap around walls
+    pub snake_speed: f64,    // e.g., 0.1 for 10 FPS
+}
+
+impl Default for GameSettings {
+    fn default() -> Self {
+        GameSettings {
+            board_width: 20,
+            board_height: 20,
+            wall_wrapping: false,
+            snake_speed: DEFAULT_SNAKE_SPEED,
+        }
+    }
 }
 
 pub struct Game {
@@ -42,6 +61,7 @@ pub struct Game {
     board_height: i32,
 
     game_state: GameState,
+    game_settings: GameSettings,
 
     main_menu_selected: usize, // Index of selected menu item in main menu
     game_over_selected: usize, // Index of selected menu item in game over screen
@@ -63,6 +83,7 @@ impl Game {
             board_height,
 
             game_state: GameState::MainMenu, // Start with main menu
+            game_settings: GameSettings::default(),
 
             main_menu_selected: 0, // Start with first option selected in main menu
             game_over_selected: 0, // Start with first option selected in game over screen
@@ -657,18 +678,11 @@ impl Game {
     pub fn update(&mut self, delta_time: f64) {
         self.waiting_time += delta_time;
 
-        if let GameState::GameOver = self.game_state {
-            if self.waiting_time > RESTART_TIME {
-                self.restart();
-            }
-            return;
-        }
-
         if !self.food_exists {
             self.add_food();
         }
 
-        if self.waiting_time > MOVING_PERIOD {
+        if self.waiting_time > DEFAULT_SNAKE_SPEED {
             self.update_snake(None);
         }
     }
@@ -690,15 +704,36 @@ impl Game {
 
     // Check snake collision.
     fn check_if_snake_alive(&self, dir: Option<Direction>) -> bool {
-        let (next_x, next_y) = self.snake.next_head(dir);
+        let (mut next_x, mut next_y) = self.snake.next_head(dir);
+
+        if self.game_settings.wall_wrapping {
+            // Wrap around walls if wall wrapping is enabled
+            if next_x <= 0 {
+                next_x = self.board_width - 2; // Wrap to right side
+            } else if next_x >= self.board_width - 1 {
+                next_x = 1; // Wrap to left side
+            }
+            if next_y <= 0 {
+                next_y = self.board_height - 2; // Wrap to bottom side
+            } else if next_y >= self.board_height - 1 {
+                next_y = 1; // Wrap to top side
+            }
+        }
 
         // Check if head overlaps body
         if self.snake.overlap_body(next_x, next_y) {
             return false;
         }
 
-        // Check if out of bounds
-        next_x > 0 && next_y > 0 && next_x < self.board_width - 1 && next_y < self.board_height - 1
+        // If wall wrapping is disabled, check for wall collisions
+        if !self.game_settings.wall_wrapping {
+            next_x > 0
+                && next_y > 0
+                && next_x < self.board_width - 1
+                && next_y < self.board_height - 1
+        } else {
+            true
+        }
     }
 
     // Spawn new food on game board
@@ -724,23 +759,51 @@ impl Game {
 
     // Update snake's state
     fn update_snake(&mut self, dir: Option<Direction>) {
-        if self.check_if_snake_alive(dir) {
-            self.snake.move_forward(dir);
+        let (mut next_x, mut next_y) = self.snake.next_head(dir);
+
+        if self.game_settings.wall_wrapping {
+            // Wrap around walls if wall wrapping is enabled
+            if next_x <= 0 {
+                next_x = self.board_width - 2; // Wrap to right side
+            } else if next_x >= self.board_width - 1 {
+                next_x = 1; // Wrap to left side
+            }
+            if next_y <= 0 {
+                next_y = self.board_height - 2; // Wrap to bottom side
+            } else if next_y >= self.board_height - 1 {
+                next_y = 1; // Wrap to top side
+            }
+            // Check if snake is going to overlap with its body
+            if self.snake.overlap_body(next_x, next_y) {
+                self.game_state = GameState::GameOver;
+            }
+            // Move snake to wrapped position
+            self.snake.move_forward_to((next_x, next_y), dir);
             self.check_eating();
+            self.waiting_time = 0.0;
         } else {
-            self.game_state = GameState::GameOver;
+            if self.check_if_snake_alive(dir) {
+                self.snake.move_forward(dir);
+                self.check_eating();
+            } else {
+                self.game_state = GameState::GameOver;
+            }
+            self.waiting_time = 0.0;
         }
-        self.waiting_time = 0.0;
     }
 
     // Reset game state
     fn restart(&mut self) {
         self.snake = Snake::new(2, 2);
         self.waiting_time = 0.0;
+
         self.food_exists = true;
         self.food_x = 6;
         self.food_y = 4;
+
         self.game_state = GameState::Playing;
+        self.game_settings = GameSettings::default();
+
         self.main_menu_selected = 0;
         self.game_over_selected = 0;
         self.pause_selected = 0;
