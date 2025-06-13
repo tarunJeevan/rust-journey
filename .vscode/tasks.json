@@ -1,0 +1,23 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "cargo build (snake game)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "build",
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/7-snake_game"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$rustc"
+            ]
+        }
+    ]
+}

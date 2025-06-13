@@ -19,8 +19,9 @@ const BUTTON_DEFAULT_COLOR: Color = [0.0, 0.0, 0.0, 0.0]; // Unselected button c
 
 const BLOCK_SIZE: f64 = 25.0; // Size of each block in pixels
 
-const MOVING_PERIOD: f64 = 0.1; // Snake's FPS. Current speed is 10 FPS
-const RESTART_TIME: f64 = 1.0; // Time to restart game after gameover
+const SLOW_SNAKE_SPEED: f64 = 0.2; // Slow snake's FPS. Current speed is 5 FPS
+const NORMAL_SNAKE_SPEED: f64 = 0.1; // Snake's FPS. Current speed is 10 FPS
+const FAST_SNAKE_SPEED: f64 = 0.05; // Fast snake's FPS. Current speed is 20 FPS
 
 #[derive(Clone, Debug)]
 pub enum GameState {
@@ -29,10 +30,86 @@ pub enum GameState {
     Paused,
     GameOver,
     Settings,
+    KeyBinding,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SnakeSpeed {
+    Slow,
+    Normal,
+    Fast,
+}
+
+impl SnakeSpeed {
+    // Convert SnakeSpeed to f64 for game speed
+    pub fn as_f64(&self) -> f64 {
+        match self {
+            SnakeSpeed::Slow => SLOW_SNAKE_SPEED,
+            SnakeSpeed::Normal => NORMAL_SNAKE_SPEED,
+            SnakeSpeed::Fast => FAST_SNAKE_SPEED,
+        }
+    }
+
+    // Go to the next speed in the cycle
+    pub fn next(&self) -> SnakeSpeed {
+        match self {
+            SnakeSpeed::Slow => SnakeSpeed::Normal,
+            SnakeSpeed::Normal => SnakeSpeed::Fast,
+            SnakeSpeed::Fast => SnakeSpeed::Slow, // Loop back to slow
+        }
+    }
+
+    // Get string representation of the speed
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SnakeSpeed::Slow => "Slow",
+            SnakeSpeed::Normal => "Normal",
+            SnakeSpeed::Fast => "Fast",
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct GameSettings {
+    pub key_bindings: KeyBindings, // e.g., "Arrow keys", "WASD".
+    pub wall_wrapping: bool,       // Whether the snake can wrap around walls
+    pub snake_speed: SnakeSpeed,   // e.g., 0.1 for 10 FPS
+}
+
+impl Default for GameSettings {
+    fn default() -> Self {
+        GameSettings {
+            wall_wrapping: false,
+            snake_speed: SnakeSpeed::Normal,
+            key_bindings: KeyBindings::default(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct KeyBindings {
+    pub up: Key,
+    pub down: Key,
+    pub left: Key,
+    pub right: Key,
+    pub pause: Key,
+}
+
+impl Default for KeyBindings {
+    fn default() -> Self {
+        KeyBindings {
+            up: Key::Up,
+            down: Key::Down,
+            left: Key::Left,
+            right: Key::Right,
+            pause: Key::P,
+        }
+    }
 }
 
 pub struct Game {
     snake: Snake,
+    waiting_time: f64,
 
     food_exists: bool,
     food_x: i32,
@@ -42,12 +119,14 @@ pub struct Game {
     board_height: i32,
 
     game_state: GameState,
+    game_settings: GameSettings,
+    waiting_for_key: Option<&'static str>, // Used to listen for key input
 
-    main_menu_selected: usize, // Index of selected menu item in main menu
-    game_over_selected: usize, // Index of selected menu item in game over screen
-    pause_selected: usize,     // Index of selected menu item in pause screen
-    // NOTE: Add more fields for pause (quit/resume game, go to settings) and settings (difficulty, controls, etc.)
-    waiting_time: f64,
+    main_menu_selected: usize,   // Index of selected menu item in main menu
+    game_over_selected: usize,   // Index of selected menu item in game over screen
+    pause_selected: usize,       // Index of selected menu item in pause screen
+    settings_selected: usize,    // Index of selected menu item in settings screen
+    key_binding_selected: usize, // Index of selected key binding in key binding screen
 }
 
 impl Game {
@@ -63,10 +142,14 @@ impl Game {
             board_height,
 
             game_state: GameState::MainMenu, // Start with main menu
+            game_settings: GameSettings::default(),
+            waiting_for_key: None, // No key is being waited for
 
             main_menu_selected: 0, // Start with first option selected in main menu
             game_over_selected: 0, // Start with first option selected in game over screen
             pause_selected: 0,     // Start with first option selected in pause screen
+            settings_selected: 0,  // Start with first option selected in settings screen
+            key_binding_selected: 0, // Start with first key binding selected in key binding screen
 
             waiting_time: 0.0,
         }
@@ -74,7 +157,6 @@ impl Game {
 
     // Handle key press events for every game state
     pub fn key_pressed(&mut self, key: Key) {
-        // TODO: Finish implementing key bindings for all game states
         match self.game_state {
             // Handle main menu key presses
             GameState::MainMenu => match key {
@@ -125,31 +207,31 @@ impl Game {
             },
             // Handle playing state key presses
             GameState::Playing => match key {
-                Key::Up => {
+                k if k == self.game_settings.key_bindings.up => {
                     // Move snake up unless it is already moving down
                     if self.snake.head_direction().opposite() != Direction::Up {
                         self.update_snake(Some(Direction::Up));
                     }
                 }
-                Key::Down => {
+                k if k == self.game_settings.key_bindings.down => {
                     // Move snake down unless it is already moving up
                     if self.snake.head_direction().opposite() != Direction::Down {
                         self.update_snake(Some(Direction::Down));
                     }
                 }
-                Key::Left => {
+                k if k == self.game_settings.key_bindings.left => {
                     // Move snake left unless it is already moving right
                     if self.snake.head_direction().opposite() != Direction::Left {
                         self.update_snake(Some(Direction::Left));
                     }
                 }
-                Key::Right => {
+                k if k == self.game_settings.key_bindings.right => {
                     // Move snake right unless it is already moving left
                     if self.snake.head_direction().opposite() != Direction::Right {
                         self.update_snake(Some(Direction::Right));
                     }
                 }
-                Key::P => {
+                k if k == self.game_settings.key_bindings.pause => {
                     // Pause current game
                     self.game_state = GameState::Paused;
                 }
@@ -256,12 +338,108 @@ impl Game {
             // Handle settings state key presses
             GameState::Settings => match key {
                 // Navigate through menu options
-                Key::Up => {}
-                Key::Down => {}
-                Key::Right => {}
-                Key::Left => {}
-                Key::Return => {} // Select chosen option
+                Key::Up => {
+                    if self.settings_selected > 0 {
+                        self.settings_selected -= 1;
+                    }
+                }
+                Key::Down => {
+                    if self.settings_selected < 2 {
+                        // NOTE: Assuming 3 menu options
+                        self.settings_selected += 1;
+                    }
+                }
+                Key::Right => {
+                    if self.settings_selected < 2 {
+                        // NOTE: Assuming 3 menu options
+                        self.settings_selected += 1;
+                    }
+                }
+                Key::Left => {
+                    if self.settings_selected > 0 {
+                        self.settings_selected -= 1;
+                    }
+                }
+                Key::Return => {
+                    // Select chosen option
+                    match self.settings_selected {
+                        0 => {
+                            // Cycle through snake speeds
+                            self.game_settings.snake_speed = self.game_settings.snake_speed.next();
+                        }
+                        1 => {
+                            // Toggle wall wrapping
+                            self.game_settings.wall_wrapping = !self.game_settings.wall_wrapping;
+                        }
+                        2 => {
+                            // Activate overlay for setting key bindings
+                            self.game_state = GameState::KeyBinding;
+                        }
+                        _ => {}
+                    }
+                }
+                Key::Backspace => {
+                    // Return to main menu
+                    self.game_state = GameState::MainMenu;
+                }
                 _ => {}
+            },
+            // Handle key binding state key presses
+            GameState::KeyBinding => match key {
+                // Navigate through key binding options
+                Key::Up => {
+                    if self.key_binding_selected > 0 {
+                        self.key_binding_selected -= 1;
+                    }
+                }
+                Key::Down => {
+                    if self.key_binding_selected < 4 {
+                        // NOTE: Assuming 5 menu options
+                        self.key_binding_selected += 1;
+                    }
+                }
+                Key::Right => {
+                    if self.key_binding_selected < 4 {
+                        // NOTE: Assuming 5 menu options
+                        self.key_binding_selected += 1;
+                    }
+                }
+                Key::Left => {
+                    if self.key_binding_selected > 0 {
+                        self.key_binding_selected -= 1;
+                    }
+                }
+                Key::Return => {
+                    // Confirm key to be rebound
+                    self.waiting_for_key = Some(match self.key_binding_selected {
+                        0 => "up",
+                        1 => "down",
+                        2 => "left",
+                        3 => "right",
+                        4 => "pause",
+                        _ => unreachable!(), // Should never happen
+                    });
+                }
+                Key::Backspace => {
+                    // Return to settings menu
+                    self.game_state = GameState::Settings;
+                    self.waiting_for_key = None;
+                }
+                _ => {
+                    // If waiting for a key, update the corresponding key binding
+                    if let Some(binding) = self.waiting_for_key {
+                        match binding {
+                            "up" => self.game_settings.key_bindings.up = key,
+                            "down" => self.game_settings.key_bindings.down = key,
+                            "left" => self.game_settings.key_bindings.left = key,
+                            "right" => self.game_settings.key_bindings.right = key,
+                            "pause" => self.game_settings.key_bindings.pause = key,
+                            _ => {}
+                        }
+                        // Clear waiting state after rebinding
+                        self.waiting_for_key = None;
+                    }
+                }
             },
         }
     }
@@ -429,7 +607,14 @@ impl Game {
     }
 
     // Draw settings screen
-    pub fn draw_settings(&self, con: &Context, g: &mut G2d) {
+    pub fn draw_settings(
+        &self,
+        con: &Context,
+        g: &mut G2d,
+        title_glyphs: &mut Glyphs,
+        text_glyphs: &mut Glyphs,
+        button_glyphs: &mut Glyphs,
+    ) {
         draw_screen(
             MENU_COLOR, // Background color
             0,
@@ -439,8 +624,113 @@ impl Game {
             con,
             g,
         );
-        // NOTE: Draw settings options, controls, etc.
-        // NOTE: Settings options should end in "Return to Main Menu"
+        // Calculate parameters for drawing title
+        let title = "Settings";
+        let title_font_size = 48;
+        let title_width = title_glyphs.width(title_font_size, title).unwrap_or(0.0);
+
+        // Calculate title text position for centering
+        let title_x = (self.board_width as f64 * BLOCK_SIZE - title_width) / 2.0;
+        let title_y = 80.0; // Position from the top
+
+        // Draw title text
+        Text::new_color(FONT_DEFAULT_COLOR, title_font_size)
+            .draw(
+                title,
+                title_glyphs,
+                &con.draw_state,
+                con.transform.trans(title_x, title_y),
+                g,
+            )
+            .unwrap();
+
+        // Calculate parameters for drawing instructions text
+        let instructions = "Press 'Backspace' to return to Main Menu";
+        let instructions_font_size = 12;
+        let instructions_width = text_glyphs
+            .width(instructions_font_size, instructions)
+            .unwrap_or(0.0);
+
+        // Calculate instructions text position for centering
+        let instructions_x = (self.board_width as f64 * BLOCK_SIZE - instructions_width) / 2.0;
+        let instructions_y = 110.0; // Position from the top
+
+        // Draw instructions text
+        Text::new_color(FONT_DEFAULT_COLOR, instructions_font_size)
+            .draw(
+                instructions,
+                text_glyphs,
+                &con.draw_state,
+                con.transform.trans(instructions_x, instructions_y),
+                g,
+            )
+            .unwrap();
+
+        // Draw menu options as description and button
+        let menu_options = [
+            (
+                "Snake Speed: ",
+                self.game_settings.snake_speed.as_str().to_string(),
+            ),
+            (
+                "Wall Wrapping: ",
+                if self.game_settings.wall_wrapping {
+                    "Enabled"
+                } else {
+                    "Disabled"
+                }
+                .to_string(),
+            ),
+            ("Key Bindings: ", "Customize".to_string()),
+        ];
+        let option_font_size = 16;
+        let row_height = 40.0;
+        let start_y = 180.0;
+        let left_margin = 60.0;
+        let right_margin = self.board_width as f64 * BLOCK_SIZE - 220.0;
+
+        // Loop through menu options and draw descriptions and buttons
+        for (i, (desc, value)) in menu_options.iter().enumerate() {
+            let y = start_y + i as f64 * (row_height + 10.0);
+
+            // Draw description text
+            Text::new_color(FONT_DEFAULT_COLOR, option_font_size)
+                .draw(
+                    desc,
+                    text_glyphs,
+                    &con.draw_state,
+                    con.transform.trans(left_margin, y),
+                    g,
+                )
+                .unwrap();
+
+            // Highlight selected option.
+            let button_color = if i == self.settings_selected {
+                BUTTON_SELECTED_COLOR // Highlight color for selected button
+            } else {
+                BUTTON_DEFAULT_COLOR // Default color for unselected buttons
+            };
+
+            // Draw button
+            draw_button(button_color, right_margin, y - 25.0, 150.0, 40.0, con, g);
+
+            let option_color = if i == self.settings_selected {
+                MAIN_MENU_FONT_SELECTED_COLOR // Highlight color for selected option
+            } else {
+                FONT_DEFAULT_COLOR // Default font color
+            };
+
+            // Draw value text
+            Text::new_color(option_color, option_font_size)
+                .draw(
+                    value,
+                    button_glyphs,
+                    &con.draw_state,
+                    con.transform.trans(right_margin + 20.0, y),
+                    g,
+                )
+                .unwrap();
+        }
     }
 
     // Draw game over screen
@@ -537,6 +827,150 @@ impl Game {
         }
     }
 
+    // Draw key bindings overlay
+    pub fn draw_key_bindings(
+        &self,
+        con: &Context,
+        g: &mut G2d,
+        title_glyphs: &mut Glyphs,
+        text_glyphs: &mut Glyphs,
+        button_glyphs: &mut Glyphs,
+    ) {
+        // Draw key bindings overlay
+        draw_screen(
+            MENU_COLOR, // Background color
+            0,
+            0,
+            self.board_width,
+            self.board_height,
+            con,
+            g,
+        );
+
+        // Calculate parameters for drawing title
+        let title = "Rebind Controls";
+        let title_font_size = 36;
+        let title_width = title_glyphs.width(title_font_size, title).unwrap_or(0.0);
+
+        // Calculate title text position for centering
+        let title_x = (self.board_width as f64 * BLOCK_SIZE - title_width) / 2.0;
+        let title_y = 80.0; // Position from the top
+
+        // Draw title text
+        Text::new_color(FONT_DEFAULT_COLOR, title_font_size)
+            .draw(
+                title,
+                title_glyphs,
+                &con.draw_state,
+                con.transform.trans(title_x, title_y),
+                g,
+            )
+            .unwrap();
+
+        // Calculate parameters for drawing intro text
+        let instructions = [
+            "Select a key to rebind",
+            "Press 'Enter'",
+            "Press new key.",
+            "Press 'Backspace' to return to Settings",
+        ];
+        let instructions_font_size = 12;
+
+        for (i, instruction) in instructions.iter().enumerate() {
+            let instruction_width = text_glyphs
+                .width(instructions_font_size, instruction)
+                .unwrap_or(0.0);
+
+            // Calculate intro text position for centering
+            let intro_x = (self.board_width as f64 * BLOCK_SIZE - instruction_width) / 2.0;
+            let intro_y = 120.0 + i as f64 * 20.0; // Position from the top
+
+            // Draw instruction text
+            Text::new_color(FONT_DEFAULT_COLOR, instructions_font_size)
+                .draw(
+                    instruction,
+                    text_glyphs,
+                    &con.draw_state,
+                    con.transform.trans(intro_x, intro_y),
+                    g,
+                )
+                .unwrap();
+        }
+
+        // Draw menu options as buttons
+        let menu_options = [
+            (
+                "Up Key: ",
+                format!("{:.?}", self.game_settings.key_bindings.up),
+            ),
+            (
+                "Down Key: ",
+                format!("{:.?}", self.game_settings.key_bindings.down),
+            ),
+            (
+                "Left Key: ",
+                format!("{:.?}", self.game_settings.key_bindings.left),
+            ),
+            (
+                "Right Key: ",
+                format!("{:.?}", self.game_settings.key_bindings.right),
+            ),
+            (
+                "Pause Key: ",
+                format!("{:.?}", self.game_settings.key_bindings.pause),
+            ),
+        ];
+        let option_font_size = 16;
+        let row_height = 40.0;
+        let start_y = 240.0;
+        let left_margin = 60.0;
+        let right_margin = self.board_width as f64 * BLOCK_SIZE - 220.0;
+
+        // Loop through menu options and draw descriptions and buttons
+        for (i, (desc, value)) in menu_options.iter().enumerate() {
+            let y = start_y + i as f64 * (row_height + 10.0);
+
+            // Draw description text
+            Text::new_color(FONT_DEFAULT_COLOR, option_font_size)
+                .draw(
+                    desc,
+                    text_glyphs,
+                    &con.draw_state,
+                    con.transform.trans(left_margin, y),
+                    g,
+                )
+                .unwrap();
+
+            // Highlight selected button
+            let button_color = if i == self.key_binding_selected {
+                BUTTON_SELECTED_COLOR // Highlight color for selected button
+            } else {
+                BUTTON_DEFAULT_COLOR // Default color for unselected buttons
+            };
+
+            // Draw button
+            draw_button(button_color, right_margin, y - 25.0, 150.0, 40.0, con, g);
+
+            // Highlight selected option
+            let option_color = if i == self.key_binding_selected {
+                MAIN_MENU_FONT_SELECTED_COLOR // Highlight color for selected option
+            } else {
+                FONT_DEFAULT_COLOR // Default font color
+            };
+
+            // Draw value text
+            Text::new_color(option_color, option_font_size)
+                .draw(
+                    value,
+                    button_glyphs,
+                    &con.draw_state,
+                    con.transform.trans(right_margin + 20.0, y),
+                    g,
+                )
+                .unwrap();
+        }
+    }
+
     // Draw main menu
     pub fn draw_main_menu(
         &self,
@@ -558,7 +992,7 @@ impl Game {
 
         // Calculate parameters for drawing title
         let title = "Snake Game";
-        let title_font_size = 32;
+        let title_font_size = 48;
         let title_width = title_glyphs.width(title_font_size, title).unwrap_or(0.0);
 
         // Calculate title text position for centering
@@ -657,18 +1091,11 @@ impl Game {
     pub fn update(&mut self, delta_time: f64) {
         self.waiting_time += delta_time;
 
-        if let GameState::GameOver = self.game_state {
-            if self.waiting_time > RESTART_TIME {
-                self.restart();
-            }
-            return;
-        }
-
         if !self.food_exists {
             self.add_food();
         }
 
-        if self.waiting_time > MOVING_PERIOD {
+        if self.waiting_time > self.game_settings.snake_speed.as_f64() {
             self.update_snake(None);
         }
     }
@@ -690,15 +1117,36 @@ impl Game {
 
     // Check snake collision.
     fn check_if_snake_alive(&self, dir: Option<Direction>) -> bool {
-        let (next_x, next_y) = self.snake.next_head(dir);
+        let (mut next_x, mut next_y) = self.snake.next_head(dir);
+
+        if self.game_settings.wall_wrapping {
+            // Wrap around walls if wall wrapping is enabled
+            if next_x <= 0 {
+                next_x = self.board_width - 2; // Wrap to right side
+            } else if next_x >= self.board_width - 1 {
+                next_x = 1; // Wrap to left side
+            }
+            if next_y <= 0 {
+                next_y = self.board_height - 2; // Wrap to bottom side
+            } else if next_y >= self.board_height - 1 {
+                next_y = 1; // Wrap to top side
+            }
+        }
 
         // Check if head overlaps body
         if self.snake.overlap_body(next_x, next_y) {
             return false;
         }
 
-        // Check if out of bounds
-        next_x > 0 && next_y > 0 && next_x < self.board_width - 1 && next_y < self.board_height - 1
+        // If wall wrapping is disabled, check for wall collisions
+        if !self.game_settings.wall_wrapping {
+            next_x > 0
+                && next_y > 0
+                && next_x < self.board_width - 1
+                && next_y < self.board_height - 1
+        } else {
+            true
+        }
     }
 
     // Spawn new food on game board
@@ -724,25 +1172,55 @@ impl Game {
 
     // Update snake's state
     fn update_snake(&mut self, dir: Option<Direction>) {
-        if self.check_if_snake_alive(dir) {
-            self.snake.move_forward(dir);
+        let (mut next_x, mut next_y) = self.snake.next_head(dir);
+
+        if self.game_settings.wall_wrapping {
+            // Wrap around walls if wall wrapping is enabled
+            if next_x <= 0 {
+                next_x = self.board_width - 2; // Wrap to right side
+            } else if next_x >= self.board_width - 1 {
+                next_x = 1; // Wrap to left side
+            }
+            if next_y <= 0 {
+                next_y = self.board_height - 2; // Wrap to bottom side
+            } else if next_y >= self.board_height - 1 {
+                next_y = 1; // Wrap to top side
+            }
+            // Check if snake is going to overlap with its body
+            if self.snake.overlap_body(next_x, next_y) {
+                self.game_state = GameState::GameOver;
+            }
+            // Move snake to wrapped position
+            self.snake.move_forward_to((next_x, next_y), dir);
             self.check_eating();
+            self.waiting_time = 0.0;
         } else {
-            self.game_state = GameState::GameOver;
+            if self.check_if_snake_alive(dir) {
+                self.snake.move_forward(dir);
+                self.check_eating();
+            } else {
+                self.game_state = GameState::GameOver;
+            }
+            self.waiting_time = 0.0;
         }
-        self.waiting_time = 0.0;
     }
 
-    // Reset game state
+    // Start new game without changing settings
     fn restart(&mut self) {
         self.snake = Snake::new(2, 2);
         self.waiting_time = 0.0;
+
         self.food_exists = true;
         self.food_x = 6;
         self.food_y = 4;
+
         self.game_state = GameState::Playing;
+        // self.game_settings = GameSettings::default();
+        self.waiting_for_key = None;
+
         self.main_menu_selected = 0;
         self.game_over_selected = 0;
         self.pause_selected = 0;
+        self.settings_selected = 0;
     }
 }
