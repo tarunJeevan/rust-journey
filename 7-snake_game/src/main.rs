@@ -139,6 +139,27 @@ fn main() {
                     game.key_pressed(key);
                 }
             }
+            GameState::KeyBinding => {
+                // Draw key binding screen
+                window.draw_2d(&event, |c, g, device| {
+                    clear(BACK_COLOR, g);
+                    game.draw_key_bindings(
+                        &c,
+                        g,
+                        &mut glyphs_bold,
+                        &mut glyphs_light,
+                        &mut glyphs_regular,
+                    );
+                    // Flush glyphs to the device
+                    glyphs_bold.factory.encoder.flush(device);
+                    glyphs_light.factory.encoder.flush(device);
+                    glyphs_regular.factory.encoder.flush(device);
+                });
+                // Handle key binding logic
+                if let Some(Button::Keyboard(key)) = event.press_args() {
+                    game.key_pressed(key);
+                }
+            }
         }
     }
 }
