@@ -131,8 +131,8 @@ impl Snake {
         }
     }
 
-    // Restore snake's tail after eating food
-    pub fn restore_tail(&mut self) {
+    // Extend snake's tail after eating food
+    pub fn extend_tail(&mut self) {
         let tail = self.tail.clone().unwrap();
         self.body.push_back(tail);
     }

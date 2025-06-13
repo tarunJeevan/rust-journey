@@ -110,6 +110,7 @@ impl Default for KeyBindings {
 pub struct Game {
     snake: Snake,
     waiting_time: f64,
+    score: i32,
 
     food_exists: bool,
     food_x: i32,
@@ -133,6 +134,8 @@ impl Game {
     pub fn new(board_width: i32, board_height: i32) -> Game {
         Game {
             snake: Snake::new(2, 2),
+            waiting_time: 0.0,
+            score: 0,
 
             food_exists: true,
             food_x: 6, // NOTE: Randomize?
@@ -150,8 +153,6 @@ impl Game {
             pause_selected: 0,     // Start with first option selected in pause screen
             settings_selected: 0,  // Start with first option selected in settings screen
             key_binding_selected: 0, // Start with first key binding selected in key binding screen
-
-            waiting_time: 0.0,
         }
     }
 
@@ -445,7 +446,7 @@ impl Game {
     }
 
     // Draw game board
-    pub fn draw_game_board(&self, con: &Context, g: &mut G2d) {
+    pub fn draw_game_board(&self, con: &Context, g: &mut G2d, title_glyphs: &mut Glyphs) {
         // Draw background
         draw_screen(
             GAME_BOARD_COLOR, // Background color
@@ -485,6 +486,28 @@ impl Game {
             con,
             g,
         );
+
+        // Calculate parameters for drawing score
+        let score_text = format!("Score: {}", self.score);
+        let score_font_size = 12;
+        let score_width = title_glyphs
+            .width(score_font_size, &score_text)
+            .unwrap_or(0.0);
+
+        // Calculate score text position for centering
+        let score_x = (self.board_width as f64 * BLOCK_SIZE - score_width) / 2.0;
+        let score_y = 40.0; // Position from the top
+
+        // Draw score text
+        Text::new_color(FONT_DEFAULT_COLOR, score_font_size)
+            .draw(
+                &score_text,
+                title_glyphs,
+                &con.draw_state,
+                con.transform.trans(score_x, score_y),
+                g,
+            )
+            .unwrap();
     }
 
     // Draw pause screen
@@ -497,7 +520,7 @@ impl Game {
         button_glyphs: &mut Glyphs,
     ) {
         // Draw game board
-        self.draw_game_board(con, g);
+        self.draw_game_board(con, g, title_glyphs);
         // Draw pause overlay
         draw_screen(
             PAUSE_COLOR, // Background color
@@ -1108,10 +1131,11 @@ impl Game {
     // Check if snake has eaten food
     fn check_eating(&mut self) {
         let (head_x, head_y): (i32, i32) = self.snake.head_position();
-        // Grow snake if food is eaten
+        // Grow snake if food is eaten and increment score
         if self.food_exists && self.food_x == head_x && self.food_y == head_y {
             self.food_exists = false;
-            self.snake.restore_tail();
+            self.snake.extend_tail();
+            self.score += 1;
         }
     }
 
@@ -1209,6 +1233,7 @@ impl Game {
     fn restart(&mut self) {
         self.snake = Snake::new(2, 2);
         self.waiting_time = 0.0;
+        self.score = 0;
 
         self.food_exists = true;
         self.food_x = 6;
