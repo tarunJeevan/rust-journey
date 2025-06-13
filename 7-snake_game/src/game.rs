@@ -84,10 +84,12 @@ pub struct Game {
 
     game_state: GameState,
     game_settings: GameSettings,
+    waiting_for_key: Option<&'static str>, // Used to listen for key input. NOTE: Move?
 
     main_menu_selected: usize, // Index of selected menu item in main menu
     game_over_selected: usize, // Index of selected menu item in game over screen
     pause_selected: usize,     // Index of selected menu item in pause screen
+    settings_selected: usize,  // Index of selected menu item in settings screen
     // NOTE: Add more fields for pause (quit/resume game, go to settings) and settings (difficulty, controls, etc.)
     waiting_time: f64,
 }
@@ -106,10 +108,12 @@ impl Game {
 
             game_state: GameState::MainMenu, // Start with main menu
             game_settings: GameSettings::default(),
+            waiting_for_key: None, // No key is being waited for
 
             main_menu_selected: 0, // Start with first option selected in main menu
             game_over_selected: 0, // Start with first option selected in game over screen
             pause_selected: 0,     // Start with first option selected in pause screen
+            settings_selected: 0,  // Start with first option selected in settings screen
 
             waiting_time: 0.0,
         }
@@ -299,13 +303,63 @@ impl Game {
             // Handle settings state key presses
             GameState::Settings => match key {
                 // Navigate through menu options
-                Key::Up => {}
-                Key::Down => {}
-                Key::Right => {}
-                Key::Left => {}
-                Key::Return => {} // Select chosen option
+                Key::Up => {
+                    if self.settings_selected > 0 {
+                        self.settings_selected -= 1;
+                    }
+                }
+                Key::Down => {
+                    if self.settings_selected < 2 {
+                        // NOTE: Assuming 3 menu options
+                        self.settings_selected += 1;
+                    }
+                }
+                Key::Right => {
+                    if self.settings_selected < 2 {
+                        // NOTE: Assuming 3 menu options
+                        self.settings_selected += 1;
+                    }
+                }
+                Key::Left => {
+                    if self.settings_selected > 0 {
+                        self.settings_selected -= 1;
+                    }
+                }
+                Key::Return => {
+                    // Select chosen option
+                    match self.settings_selected {
+                        0 => {
+                            // Activate overlay for setting speed
+                        }
+                        1 => {
+                            // Toggle wall wrapping
+                            self.game_settings.wall_wrapping = !self.game_settings.wall_wrapping;
+                        }
+                        2 => {
+                            // Activate overlay for setting key bindings
+                        }
+                        _ => {}
+                    }
+                }
+                Key::Backspace => {
+                    // Return to main menu
+                    self.game_state = GameState::MainMenu;
+                }
                 _ => {}
             },
+        }
+        // TODO: Rework for settings UI
+        if let Some(action) = self.waiting_for_key {
+            // If waiting for key input, set the key binding
+            match action {
+                "up" => self.game_settings.key_bindings.up = key,
+                "down" => self.game_settings.key_bindings.down = key,
+                "left" => self.game_settings.key_bindings.left = key,
+                "right" => self.game_settings.key_bindings.right = key,
+                "pause" => self.game_settings.key_bindings.pause = key,
+                _ => {}
+            }
+            self.waiting_for_key = None; // Reset waiting state
         }
     }
 
@@ -472,7 +526,14 @@ impl Game {
     }
 
     // Draw settings screen
-    pub fn draw_settings(&self, con: &Context, g: &mut G2d) {
+    pub fn draw_settings(
+        &self,
+        con: &Context,
+        g: &mut G2d,
+        title_glyphs: &mut Glyphs,
+        text_glyphs: &mut Glyphs,
+        button_glyphs: &mut Glyphs,
+    ) {
         draw_screen(
             MENU_COLOR, // Background color
             0,
@@ -482,8 +543,113 @@ impl Game {
             con,
             g,
         );
-        // NOTE: Draw settings options, controls, etc.
-        // NOTE: Settings options should end in "Return to Main Menu"
+        // Calculate parameters for drawing title
+        let title = "Settings";
+        let title_font_size = 48;
+        let title_width = title_glyphs.width(title_font_size, title).unwrap_or(0.0);
+
+        // Calculate title text position for centering
+        let title_x = (self.board_width as f64 * BLOCK_SIZE - title_width) / 2.0;
+        let title_y = 80.0; // Position from the top
+
+        // Draw title text
+        Text::new_color(FONT_DEFAULT_COLOR, title_font_size)
+            .draw(
+                title,
+                title_glyphs,
+                &con.draw_state,
+                con.transform.trans(title_x, title_y),
+                g,
+            )
+            .unwrap();
+
+        // Calculate parameters for drawing instructions text
+        let instructions = "Press 'Backspace' to return to Main Menu";
+        let instructions_font_size = 12;
+        let instructions_width = text_glyphs
+            .width(instructions_font_size, instructions)
+            .unwrap_or(0.0);
+
+        // Calculate instructions text position for centering
+        let instructions_x = (self.board_width as f64 * BLOCK_SIZE - instructions_width) / 2.0;
+        let instructions_y = 110.0; // Position from the top
+
+        // Draw intro text
+        Text::new_color(FONT_DEFAULT_COLOR, instructions_font_size)
+            .draw(
+                instructions,
+                text_glyphs,
+                &con.draw_state,
+                con.transform.trans(instructions_x, instructions_y),
+                g,
+            )
+            .unwrap();
+
+        // Draw menu options as description and button
+        let menu_options = [
+            (
+                "Snake Speed: ",
+                format!("{:.1}", self.game_settings.snake_speed),
+            ),
+            (
+                "Wall Wrapping: ",
+                if self.game_settings.wall_wrapping {
+                    "Enabled"
+                } else {
+                    "Disabled"
+                }
+                .to_string(),
+            ),
+            ("Key Bindings: ", "Customize".to_string()),
+        ];
+        let option_font_size = 16;
+        let row_height = 40.0;
+        let start_y = 180.0;
+        let left_margin = 60.0;
+        let right_margin = self.board_width as f64 * BLOCK_SIZE - 220.0;
+
+        // Loop through menu options and draw descriptions and buttons
+        for (i, (desc, value)) in menu_options.iter().enumerate() {
+            let y = start_y + i as f64 * (row_height + 10.0);
+
+            // Draw description text
+            Text::new_color(FONT_DEFAULT_COLOR, option_font_size)
+                .draw(
+                    desc,
+                    text_glyphs,
+                    &con.draw_state,
+                    con.transform.trans(left_margin, y),
+                    g,
+                )
+                .unwrap();
+
+            // Highlight selected option.
+            let button_color = if i == self.settings_selected {
+                BUTTON_SELECTED_COLOR // Highlight color for selected button
+            } else {
+                BUTTON_DEFAULT_COLOR // Default color for unselected buttons
+            };
+
+            // Draw button
+            draw_button(button_color, right_margin, y - 25.0, 150.0, 40.0, con, g);
+
+            let option_color = if i == self.settings_selected {
+                MAIN_MENU_FONT_SELECTED_COLOR // Highlight color for selected option
+            } else {
+                FONT_DEFAULT_COLOR // Default font color
+            };
+
+            // Draw value text
+            Text::new_color(option_color, option_font_size)
+                .draw(
+                    value,
+                    button_glyphs,
+                    &con.draw_state,
+                    con.transform.trans(right_margin + 20.0, y),
+                    g,
+                )
+                .unwrap();
+        }
     }
 
     // Draw game over screen
@@ -601,7 +767,7 @@ impl Game {
 
         // Calculate parameters for drawing title
         let title = "Snake Game";
-        let title_font_size = 32;
+        let title_font_size = 48;
         let title_width = title_glyphs.width(title_font_size, title).unwrap_or(0.0);
 
         // Calculate title text position for centering
@@ -814,7 +980,7 @@ impl Game {
         }
     }
 
-    // Reset game state
+    // Start new game without changing settings
     fn restart(&mut self) {
         self.snake = Snake::new(2, 2);
         self.waiting_time = 0.0;
@@ -824,10 +990,12 @@ impl Game {
         self.food_y = 4;
 
         self.game_state = GameState::Playing;
-        self.game_settings = GameSettings::default();
+        // self.game_settings = GameSettings::default();
+        self.waiting_for_key = None;
 
         self.main_menu_selected = 0;
         self.game_over_selected = 0;
         self.pause_selected = 0;
+        self.settings_selected = 0;
     }
 }
