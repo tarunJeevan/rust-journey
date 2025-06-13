@@ -24,11 +24,9 @@ fn main() {
         WindowSettings::new("Snake Game", [to_coord_u32(width), to_coord_u32(height)])
             .exit_on_esc(true)
             .build()
-            .unwrap(); // FIXME: Return gracefully using error handling
+            .unwrap(); // FIXME: Return gracefully using error handling. Use unwrap_or_else()?
 
     // TODO: Add scoring system
-    // TODO: Add difficulty modes in settings
-    // TODO: Add toggleable wall wrapping in settings
     // TODO: Add color customization in settings
     // TODO: Add mouse inputs for buttons
 
@@ -72,8 +70,10 @@ fn main() {
             }
             GameState::Playing => {
                 // Draw game board
-                window.draw_2d(&event, |c, g, _| {
-                    game.draw_game_board(&c, g);
+                window.draw_2d(&event, |c, g, device| {
+                    game.draw_game_board(&c, g, &mut glyphs_bold);
+                    // Flush glyphs to the device
+                    glyphs_bold.factory.encoder.flush(device);
                 });
                 // Handle playing state logic
                 if let Some(Button::Keyboard(key)) = event.press_args() {
