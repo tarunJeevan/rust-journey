@@ -44,3 +44,36 @@ Over the course of remaking this game I learned how to:
 
 ## 5-weather_app
 A simple weather app that fetches real-time data and serves as an introduction to web servers written in Rust. 
+
+**Unfinished**
+
+## 6-grep_cli_tool
+A command-line utility inspired by Unix grep, written in Rust. This tool searches for a query string within a file and highlights all matches in color. It supports both case-sensitive and case-insensitive searches, and can optionally display line numbers for each match.
+
+**Functionality**:
+- Search for a string in a file, with optional case insensitivity.
+- Highlight all matches using colored output for better visibility.
+- Optionally display line numbers alongside matching lines.
+- Handles errors gracefully and provides clear output. 
+
+**Crates Used**: 
+- `clap`: For parsing command-line arguments and flags.
+- `colored`: For coloring and styling matched text in terminal output.
+- `regex`: For efficient and flexible pattern matching, including case-insensitive searches. 
+
+## 7-snake_game
+A classic Snake game implemented in Rust using the `piston_window` crate, a wrapper for the Piston game framework. This project features a graphical interface, customizable controls, and multiple game states such as Main Menu, Playing, Paused, Game Over, and Settings. The game supports adjustable snake speed, wall wrapping, and key rebinding for a personalized experience.
+
+**Functionality**: 
+- Play the classic Snake game with smooth graphics and keyboard controls.
+- Navigate through menus for starting the game, adjusting settings, or rebinding keys. 
+- Choose between different snake speeds and enable/disable wall wrapping.
+- Pause and resume gameplay, or restart after a game over.
+- Score tracking and visual feedback for all game states. 
+
+**Crates Used**: 
+- `piston_window`: For window management, rendering, and event handling.
+- `find_folder`: For locating asset files such as fonts.
+- `rand`: For randomizing food placement on the game board.
+
+To play this game, clone the repo and navigate into 7-snake_game. Run `cargo run` in your terminal (assuming you have cargo installed) or run `cargo build` and find the executable under `./target/debug/snake_game`.

@@ -26,7 +26,6 @@ fn main() {
             .build()
             .unwrap(); // FIXME: Return gracefully using error handling. Use unwrap_or_else()?
 
-    // TODO: Add scoring system
     // TODO: Add color customization in settings
     // TODO: Add mouse inputs for buttons
 
