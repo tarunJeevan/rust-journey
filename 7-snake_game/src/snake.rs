@@ -1,4 +1,5 @@
-use crate::game::{BLOCK_SIZE, SnakeTextures};
+use crate::draw::BLOCK_SIZE;
+use crate::game::SnakeTextures;
 
 use piston_window::{Context, G2d, Image, Transformed};
 use std::collections::LinkedList;

@@ -39,10 +39,10 @@ fn load_snake_textures(window: &mut PistonWindow) -> SnakeTextures {
 
     // Load tail textures for loop
     let tail_directions = [
-        (Direction::Up, "assets/snake/tail_up.png"),
-        (Direction::Down, "assets/snake/tail_down.png"),
-        (Direction::Right, "assets/snake/tail_right.png"),
-        (Direction::Left, "assets/snake/tail_left.png"),
+        (Direction::Up, "assets/snake/tail_down.png"),
+        (Direction::Down, "assets/snake/tail_up.png"),
+        (Direction::Right, "assets/snake/tail_left.png"),
+        (Direction::Left, "assets/snake/tail_right.png"),
     ];
 
     // Load body textures for loop
@@ -56,7 +56,7 @@ fn load_snake_textures(window: &mut PistonWindow) -> SnakeTextures {
         (BodyOrientation::TurnUR, "assets/snake/body_topright.png"),
         (BodyOrientation::TurnBL, "assets/snake/body_bottomleft.png"),
         (BodyOrientation::TurnBR, "assets/snake/body_bottomright.png"),
-    ]; // NOTE: Make sure correct textures were loaded for each orientation
+    ];
 
     // Load head textures into HashMap
     for (dir, path) in &head_directions {
@@ -106,7 +106,7 @@ fn load_snake_textures(window: &mut PistonWindow) -> SnakeTextures {
 
 fn main() {
     // Default game width and height (in units)
-    let (width, height) = (20, 20);
+    let (width, height) = (25, 25);
 
     // Customize game window
     let mut window: PistonWindow =

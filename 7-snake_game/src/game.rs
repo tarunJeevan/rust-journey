@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::draw::{draw_block, draw_button, draw_screen};
+use crate::draw::{BLOCK_SIZE, draw_block, draw_button, draw_screen};
 use crate::snake::{BodyOrientation, Direction, Snake};
 
 use piston_window::{CharacterCache, G2dTexture};
@@ -18,8 +18,6 @@ const MAIN_MENU_FONT_SELECTED_COLOR: Color = [0.7, 0.0, 0.0, 1.0]; // Selected f
 const GAMEOVER_FONT_SELECTED_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Selected font color in game over screen
 const BUTTON_SELECTED_COLOR: Color = [0.0, 0.8, 0.5, 1.0]; // Selected button color
 const BUTTON_DEFAULT_COLOR: Color = [0.0, 0.0, 0.0, 0.0]; // Unselected button color
-
-pub const BLOCK_SIZE: f64 = 25.0; // Size of each block in pixels
 
 const SLOW_SNAKE_SPEED: f64 = 0.2; // Slow snake's FPS. Current speed is 5 FPS
 const NORMAL_SNAKE_SPEED: f64 = 0.1; // Snake's FPS. Current speed is 10 FPS
