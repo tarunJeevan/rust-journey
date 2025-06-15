@@ -1,7 +1,9 @@
-use crate::draw::{draw_block, draw_button, draw_screen};
-use crate::snake::{Direction, Snake};
+use std::collections::HashMap;
 
-use piston_window::CharacterCache;
+use crate::draw::{draw_block, draw_button, draw_screen};
+use crate::snake::{BodyOrientation, Direction, Snake};
+
+use piston_window::{CharacterCache, G2dTexture};
 use piston_window::{Context, G2d, Glyphs, Key, Text, Transformed, types::Color};
 use rand::{Rng, rng};
 
@@ -22,6 +24,13 @@ const BLOCK_SIZE: f64 = 25.0; // Size of each block in pixels
 const SLOW_SNAKE_SPEED: f64 = 0.2; // Slow snake's FPS. Current speed is 5 FPS
 const NORMAL_SNAKE_SPEED: f64 = 0.1; // Snake's FPS. Current speed is 10 FPS
 const FAST_SNAKE_SPEED: f64 = 0.05; // Fast snake's FPS. Current speed is 20 FPS
+
+// Snake textures
+pub struct SnakeTextures {
+    pub head: HashMap<Direction, G2dTexture>,
+    pub body: HashMap<BodyOrientation, G2dTexture>,
+    pub tail: HashMap<Direction, G2dTexture>,
+}
 
 #[derive(Clone, Debug)]
 pub enum GameState {
@@ -112,6 +121,8 @@ pub struct Game {
     waiting_time: f64,
     score: i32,
 
+    snake_textures: SnakeTextures,
+
     food_exists: bool,
     food_x: i32,
     food_y: i32,
@@ -131,11 +142,13 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(board_width: i32, board_height: i32) -> Game {
+    pub fn new(board_width: i32, board_height: i32, snake_textures: SnakeTextures) -> Game {
         Game {
             snake: Snake::new(2, 2),
             waiting_time: 0.0,
             score: 0,
+
+            snake_textures,
 
             food_exists: true,
             food_x: 6, // NOTE: Randomize?

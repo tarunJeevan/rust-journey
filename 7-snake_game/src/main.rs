@@ -6,14 +6,91 @@ mod draw;
 mod game;
 mod snake;
 
+use std::collections::HashMap;
+
 use piston_window::{
-    Button, PistonWindow, PressEvent, UpdateEvent, WindowSettings, clear, types::Color,
+    Button, Flip, PistonWindow, PressEvent, Texture, TextureSettings, UpdateEvent, WindowSettings,
+    clear, types::Color,
 };
 
 use draw::to_coord_u32;
 use game::{Game, GameState};
 
+use crate::{
+    game::SnakeTextures,
+    snake::{BodyOrientation, Direction},
+};
+
 const BACK_COLOR: Color = [0.5, 0.5, 0.5, 1.0]; // Game board background color
+
+// Load game textures
+fn load_snake_textures(window: &mut PistonWindow) -> SnakeTextures {
+    let mut head = HashMap::new();
+    let mut body = HashMap::new();
+    let mut tail = HashMap::new();
+
+    // Load head textures for loop
+    let directions = [
+        (Direction::Up, "assets/snake/head_up.png"),
+        (Direction::Down, "assets/snake/head_down.png"),
+        (Direction::Left, "assets/snake/head_left.png"),
+        (Direction::Right, "assets/snake/head_right.png"),
+    ];
+
+    // Load body textures for loop
+    let body_orientations = [
+        (
+            BodyOrientation::Horizontal,
+            "assets/snake/body_horizontal.png",
+        ),
+        (BodyOrientation::Vertical, "assets/snake/body_vertical.png"),
+        (BodyOrientation::TurnUL, "assets/snake/body_topleft.png"),
+        (BodyOrientation::TurnUR, "assets/snake/body_topright.png"),
+        (BodyOrientation::TurnBL, "assets/snake/body_bottomleft.png"),
+        (BodyOrientation::TurnBR, "assets/snake/body_bottomright.png"),
+    ]; // NOTE: Make sure correct textures were loaded for each orientation
+
+    for (dir, path) in &directions {
+        // Insert head textures into HashMap
+        head.insert(
+            *dir,
+            Texture::from_path(
+                &mut window.create_texture_context(),
+                path,
+                Flip::None,
+                &TextureSettings::new(),
+            )
+            .unwrap(),
+        );
+        // Insert tail textures into HashMap
+        tail.insert(
+            *dir,
+            Texture::from_path(
+                &mut window.create_texture_context(),
+                format!("assets/snake/tail_{:?}.png", dir).to_lowercase(),
+                Flip::None,
+                &TextureSettings::new(),
+            )
+            .unwrap(),
+        );
+    }
+
+    for (orientation, path) in &body_orientations {
+        // Insert body textures into HashMap
+        body.insert(
+            *orientation,
+            Texture::from_path(
+                &mut window.create_texture_context(),
+                path,
+                Flip::None,
+                &TextureSettings::new(),
+            )
+            .unwrap(),
+        );
+    }
+
+    SnakeTextures { head, body, tail }
+}
 
 fn main() {
     // Default game width and height (in units)
@@ -29,11 +106,11 @@ fn main() {
     // TODO: Add color customization in settings
     // TODO: Add mouse inputs for buttons
 
-    let mut game = Game::new(width, height);
+    let mut game = Game::new(width, height, load_snake_textures(&mut window));
 
     // Load font for text rendering
     let assets = find_folder::Search::ParentsThenKids(3, 3)
-        .for_folder("assets")
+        .for_folder("fonts")
         .unwrap();
     let font_bold = &assets.join("FiraCode-Bold.ttf");
     let font_light = &assets.join("FiraCode-Light.ttf");

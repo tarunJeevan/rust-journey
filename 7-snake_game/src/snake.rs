@@ -5,7 +5,7 @@ use std::collections::LinkedList;
 
 const SNAKE_COLOR: Color = [0.00, 0.80, 0.00, 1.0]; // Snake's RGB color
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum Direction {
     Up,
     Down,
@@ -22,6 +22,16 @@ impl Direction {
             Direction::Right => Direction::Left,
         }
     }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+pub enum BodyOrientation {
+    Horizontal,
+    Vertical,
+    TurnUL,
+    TurnUR,
+    TurnBL,
+    TurnBR,
 }
 
 #[derive(Debug, Clone)]
