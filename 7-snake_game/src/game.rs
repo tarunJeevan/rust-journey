@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 
-use crate::draw::{BLOCK_SIZE, draw_block, draw_button, draw_screen};
+use crate::draw::{BLOCK_SIZE, draw_button, draw_food, draw_screen};
 use crate::snake::{BodyOrientation, Direction, Snake};
 
 use piston_window::{CharacterCache, G2dTexture};
 use piston_window::{Context, G2d, Glyphs, Key, Text, Transformed, types::Color};
 use rand::{Rng, rng};
 
-const FOOD_COLOR: Color = [0.8, 0.0, 0.0, 1.0]; // Food's RGB color
 const BORDER_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Border's RGB color
 const GAME_BOARD_COLOR: Color = [0.5, 0.5, 0.5, 1.0]; // Game board background color
 const GAMEOVER_COLOR: Color = [0.9, 0.0, 0.0, 0.5]; // Gameover's RGB color
@@ -28,6 +27,10 @@ pub struct SnakeTextures {
     pub head: HashMap<Direction, G2dTexture>,
     pub body: HashMap<BodyOrientation, G2dTexture>,
     pub tail: HashMap<Direction, G2dTexture>,
+}
+
+pub struct FoodTextures {
+    pub apple: G2dTexture,
 }
 
 #[derive(Clone, Debug)]
@@ -120,6 +123,7 @@ pub struct Game {
     score: i32,
 
     snake_textures: SnakeTextures,
+    food_textures: FoodTextures,
 
     food_exists: bool,
     food_x: i32,
@@ -140,13 +144,19 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(board_width: i32, board_height: i32, snake_textures: SnakeTextures) -> Game {
+    pub fn new(
+        board_width: i32,
+        board_height: i32,
+        snake_textures: SnakeTextures,
+        food_textures: FoodTextures,
+    ) -> Game {
         Game {
             snake: Snake::new(2, 2),
             waiting_time: 0.0,
             score: 0,
 
             snake_textures,
+            food_textures,
 
             food_exists: true,
             food_x: 6, // NOTE: Randomize?
@@ -473,7 +483,7 @@ impl Game {
 
         // Draw the food
         if self.food_exists {
-            draw_block(FOOD_COLOR, self.food_x, self.food_y, con, g);
+            draw_food(self.food_x, self.food_y, con, g, &self.food_textures);
         }
 
         // Draw the border

@@ -1,4 +1,6 @@
-use piston_window::{Context, G2d, rectangle, types::Color};
+use piston_window::{Context, G2d, Image, rectangle, types::Color};
+
+use crate::game::FoodTextures;
 
 pub const BLOCK_SIZE: f64 = 25.0; // Block scaling factor
 
@@ -10,12 +12,17 @@ pub fn to_coord_u32(game_coord: i32) -> u32 {
     to_coord(game_coord) as u32
 }
 
-// Draw blocks for food
-pub fn draw_block(color: Color, x: i32, y: i32, con: &Context, g: &mut G2d) {
+// Draw snake food
+pub fn draw_food(x: i32, y: i32, con: &Context, g: &mut G2d, textures: &FoodTextures) {
     let x = to_coord(x);
     let y = to_coord(y);
 
-    rectangle(color, [x, y, BLOCK_SIZE, BLOCK_SIZE], con.transform, g);
+    Image::new().rect([x, y, BLOCK_SIZE, BLOCK_SIZE]).draw(
+        &textures.apple,
+        &con.draw_state,
+        con.transform,
+        g,
+    );
 }
 
 // Draw screen
