@@ -30,11 +30,19 @@ fn load_snake_textures(window: &mut PistonWindow) -> SnakeTextures {
     let mut tail = HashMap::new();
 
     // Load head textures for loop
-    let directions = [
+    let head_directions = [
         (Direction::Up, "assets/snake/head_up.png"),
         (Direction::Down, "assets/snake/head_down.png"),
         (Direction::Left, "assets/snake/head_left.png"),
         (Direction::Right, "assets/snake/head_right.png"),
+    ];
+
+    // Load tail textures for loop
+    let tail_directions = [
+        (Direction::Up, "assets/snake/tail_up.png"),
+        (Direction::Down, "assets/snake/tail_down.png"),
+        (Direction::Right, "assets/snake/tail_right.png"),
+        (Direction::Left, "assets/snake/tail_left.png"),
     ];
 
     // Load body textures for loop
@@ -50,8 +58,8 @@ fn load_snake_textures(window: &mut PistonWindow) -> SnakeTextures {
         (BodyOrientation::TurnBR, "assets/snake/body_bottomright.png"),
     ]; // NOTE: Make sure correct textures were loaded for each orientation
 
-    for (dir, path) in &directions {
-        // Insert head textures into HashMap
+    // Load head textures into HashMap
+    for (dir, path) in &head_directions {
         head.insert(
             *dir,
             Texture::from_path(
@@ -62,12 +70,15 @@ fn load_snake_textures(window: &mut PistonWindow) -> SnakeTextures {
             )
             .unwrap(),
         );
-        // Insert tail textures into HashMap
+    }
+
+    // Load tail textures into HashMap
+    for (dir, path) in &tail_directions {
         tail.insert(
             *dir,
             Texture::from_path(
                 &mut window.create_texture_context(),
-                format!("assets/snake/tail_{:?}.png", dir).to_lowercase(),
+                path,
                 Flip::None,
                 &TextureSettings::new(),
             )
@@ -75,6 +86,7 @@ fn load_snake_textures(window: &mut PistonWindow) -> SnakeTextures {
         );
     }
 
+    // Load body textures into HashMap
     for (orientation, path) in &body_orientations {
         // Insert body textures into HashMap
         body.insert(

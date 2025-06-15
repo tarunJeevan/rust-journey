@@ -1,9 +1,7 @@
-use crate::draw::draw_block;
+use crate::game::{BLOCK_SIZE, SnakeTextures};
 
-use piston_window::{Context, G2d, types::Color};
+use piston_window::{Context, G2d, Image, Transformed};
 use std::collections::LinkedList;
-
-const SNAKE_COLOR: Color = [0.00, 0.80, 0.00, 1.0]; // Snake's RGB color
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum Direction {
@@ -64,9 +62,78 @@ impl Snake {
     }
 
     // Draw snake on screen
-    pub fn draw(&self, con: &Context, g: &mut G2d) {
-        for block in &self.body {
-            draw_block(SNAKE_COLOR, block.x, block.y, con, g);
+    pub fn draw(&self, con: &Context, g: &mut G2d, textures: &SnakeTextures) {
+        let mut iter = self.body.iter();
+        let len = self.body.len();
+
+        // Head section
+        if let Some(head) = iter.next() {
+            let head_dir = self.direction;
+            Image::new().draw(
+                &textures.head[&head_dir],
+                &con.draw_state,
+                con.transform
+                    .trans((head.x as f64) * BLOCK_SIZE, (head.y as f64) * BLOCK_SIZE),
+                g,
+            );
+        }
+        // Body and tail sections
+        let body_vec: Vec<&Block> = self.body.iter().collect();
+        for i in 1..len {
+            let curr = body_vec[i];
+
+            // Tail
+            if i == len - 1 {
+                let prev = body_vec[i - 1];
+                let tail_dir = match (prev.x - curr.x, prev.y - curr.y) {
+                    (1, 0) => Direction::Right,
+                    (-1, 0) => Direction::Left,
+                    (0, 1) => Direction::Down, // Vertical is flipped as y-axis goes down
+                    (0, -1) => Direction::Up,  // Vertical is flipped as y-axis goes down
+                    _ => self.direction,       // Fallback
+                };
+                Image::new().draw(
+                    &textures.tail[&tail_dir],
+                    &con.draw_state,
+                    con.transform
+                        .trans((curr.x as f64) * BLOCK_SIZE, (curr.y as f64) * BLOCK_SIZE),
+                    g,
+                );
+            }
+            // Body
+            else {
+                let prev = body_vec[i - 1];
+                let next = body_vec[i + 1];
+
+                let orientation = if prev.x == next.x {
+                    BodyOrientation::Vertical
+                } else if prev.y == next.y {
+                    BodyOrientation::Horizontal
+                } else {
+                    // Calculate turn direction
+                    if (prev.x < curr.x && next.y < curr.y) || (next.x < curr.x && prev.y < curr.y)
+                    {
+                        BodyOrientation::TurnUL
+                    } else if (prev.x > curr.x && next.y < curr.y)
+                        || (next.x > curr.x && prev.y < curr.y)
+                    {
+                        BodyOrientation::TurnUR
+                    } else if (prev.x < curr.x && next.y > curr.y)
+                        || (next.x < curr.x && prev.y > curr.y)
+                    {
+                        BodyOrientation::TurnBL
+                    } else {
+                        BodyOrientation::TurnBR
+                    }
+                };
+                Image::new().draw(
+                    &textures.body[&orientation],
+                    &con.draw_state,
+                    con.transform
+                        .trans((curr.x as f64) * BLOCK_SIZE, (curr.y as f64) * BLOCK_SIZE),
+                    g,
+                );
+            }
         }
     }
 

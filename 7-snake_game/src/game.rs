@@ -19,7 +19,7 @@ const GAMEOVER_FONT_SELECTED_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Selected fo
 const BUTTON_SELECTED_COLOR: Color = [0.0, 0.8, 0.5, 1.0]; // Selected button color
 const BUTTON_DEFAULT_COLOR: Color = [0.0, 0.0, 0.0, 0.0]; // Unselected button color
 
-const BLOCK_SIZE: f64 = 25.0; // Size of each block in pixels
+pub const BLOCK_SIZE: f64 = 25.0; // Size of each block in pixels
 
 const SLOW_SNAKE_SPEED: f64 = 0.2; // Slow snake's FPS. Current speed is 5 FPS
 const NORMAL_SNAKE_SPEED: f64 = 0.1; // Snake's FPS. Current speed is 10 FPS
@@ -471,7 +471,7 @@ impl Game {
             g,
         );
         // Draw the snake
-        self.snake.draw(con, g);
+        self.snake.draw(con, g, &self.snake_textures);
 
         // Draw the food
         if self.food_exists {
