@@ -70,7 +70,7 @@ impl Snake {
         // Head section
         if let Some(head) = iter.next() {
             let head_dir = self.direction;
-            Image::new().draw(
+            Image::new().rect([0.0, 0.0, BLOCK_SIZE, BLOCK_SIZE]).draw(
                 &textures.head[&head_dir],
                 &con.draw_state,
                 con.transform
@@ -93,7 +93,7 @@ impl Snake {
                     (0, -1) => Direction::Up,  // Vertical is flipped as y-axis goes down
                     _ => self.direction,       // Fallback
                 };
-                Image::new().draw(
+                Image::new().rect([0.0, 0.0, BLOCK_SIZE, BLOCK_SIZE]).draw(
                     &textures.tail[&tail_dir],
                     &con.draw_state,
                     con.transform
@@ -127,7 +127,7 @@ impl Snake {
                         BodyOrientation::TurnBR
                     }
                 };
-                Image::new().draw(
+                Image::new().rect([0.0, 0.0, BLOCK_SIZE, BLOCK_SIZE]).draw(
                     &textures.body[&orientation],
                     &con.draw_state,
                     con.transform
