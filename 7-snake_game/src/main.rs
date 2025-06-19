@@ -17,11 +17,31 @@ use draw::to_coord_u32;
 use game::{Game, GameState};
 
 use crate::{
-    game::{FoodTextures, SnakeTextures},
+    game::{BoardTextures, FoodTextures, SnakeTextures},
     snake::{BodyOrientation, Direction},
 };
 
 const BACK_COLOR: Color = [0.5, 0.5, 0.5, 1.0]; // Game board background color
+
+// Load game board textures
+fn load_board_textures(window: &mut PistonWindow) -> BoardTextures {
+    BoardTextures {
+        grass: Texture::from_path(
+            &mut window.create_texture_context(),
+            "assets/grass-tile.png",
+            Flip::None,
+            &TextureSettings::new(),
+        )
+        .unwrap(),
+        border: Texture::from_path(
+            &mut window.create_texture_context(),
+            "assets/brick-border.png",
+            Flip::None,
+            &TextureSettings::new(),
+        )
+        .unwrap(),
+    }
+}
 
 // Load food textures
 fn load_food_textures(window: &mut PistonWindow) -> FoodTextures {
@@ -134,8 +154,9 @@ fn main() {
     // Load textures
     let snake_textures = load_snake_textures(&mut window);
     let food_textures = load_food_textures(&mut window);
+    let board_textures = load_board_textures(&mut window);
 
-    let mut game = Game::new(width, height, snake_textures, food_textures);
+    let mut game = Game::new(width, height, snake_textures, food_textures, board_textures);
 
     // Load font for text rendering
     let assets = find_folder::Search::ParentsThenKids(3, 3)

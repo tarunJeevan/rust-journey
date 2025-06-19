@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
-use crate::draw::{BLOCK_SIZE, draw_button, draw_food, draw_screen};
+use crate::draw::{
+    BLOCK_SIZE, draw_button, draw_food, draw_screen, draw_tiled_background, to_coord_u32,
+};
 use crate::snake::{BodyOrientation, Direction, Snake};
 
-use piston_window::{CharacterCache, G2dTexture};
+use piston_window::{CharacterCache, G2dTexture, Image};
 use piston_window::{Context, G2d, Glyphs, Key, Text, Transformed, types::Color};
 use rand::{Rng, rng};
 
-const BORDER_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Border's RGB color
-const GAME_BOARD_COLOR: Color = [0.5, 0.5, 0.5, 1.0]; // Game board background color
 const GAMEOVER_COLOR: Color = [0.9, 0.0, 0.0, 0.5]; // Gameover's RGB color
 const PAUSE_COLOR: Color = [0.0, 0.0, 0.0, 0.5]; // Pause screen overlay RGB color
 const MENU_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Settings screen RGB color
@@ -31,6 +31,11 @@ pub struct SnakeTextures {
 
 pub struct FoodTextures {
     pub apple: G2dTexture,
+}
+
+pub struct BoardTextures {
+    pub grass: G2dTexture,
+    pub border: G2dTexture,
 }
 
 #[derive(Clone, Debug)]
@@ -117,6 +122,29 @@ impl Default for KeyBindings {
     }
 }
 
+// Helper function to generate tile tints
+fn generate_tile_tints(width: i32, height: i32) -> Vec<Vec<[f32; 4]>> {
+    let mut rng = rand::rng();
+    (0..width)
+        .map(|_| {
+            (0..height)
+                .map(|_| {
+                    // Generate a random green tint to apply to texture
+                    let green: f32 = rng.random_range(0.95..=1.0);
+                    [0.7 * green, green, 0.7 * green, 1.0]
+                })
+                .collect()
+        })
+        .collect()
+}
+
+// Helper function to randomize initial food placement
+fn food_randomizer(range: i32) -> i32 {
+    let mut rng = rng();
+
+    rng.random_range(1..range - 1)
+}
+
 pub struct Game {
     snake: Snake,
     waiting_time: f64,
@@ -124,6 +152,8 @@ pub struct Game {
 
     snake_textures: SnakeTextures,
     food_textures: FoodTextures,
+    board_textures: BoardTextures,
+    tile_tints: Vec<Vec<[f32; 4]>>,
 
     food_exists: bool,
     food_x: i32,
@@ -149,6 +179,7 @@ impl Game {
         board_height: i32,
         snake_textures: SnakeTextures,
         food_textures: FoodTextures,
+        board_textures: BoardTextures,
     ) -> Game {
         Game {
             snake: Snake::new(2, 2),
@@ -157,10 +188,12 @@ impl Game {
 
             snake_textures,
             food_textures,
+            board_textures,
+            tile_tints: generate_tile_tints(board_width, board_height),
 
             food_exists: true,
-            food_x: 6, // NOTE: Randomize?
-            food_y: 4, // NOTE: Randomize?
+            food_x: food_randomizer(board_width),
+            food_y: food_randomizer(board_height),
 
             board_width,
             board_height,
@@ -469,14 +502,13 @@ impl Game {
     // Draw game board
     pub fn draw_game_board(&self, con: &Context, g: &mut G2d, title_glyphs: &mut Glyphs) {
         // Draw background
-        draw_screen(
-            GAME_BOARD_COLOR, // Background color
-            0,
-            0,
+        draw_tiled_background(
             self.board_width,
             self.board_height,
             con,
             g,
+            &self.board_textures,
+            &self.tile_tints,
         );
         // Draw the snake
         self.snake.draw(con, g, &self.snake_textures);
@@ -486,27 +518,59 @@ impl Game {
             draw_food(self.food_x, self.food_y, con, g, &self.food_textures);
         }
 
-        // Draw the border
-        draw_screen(BORDER_COLOR, 0, 0, self.board_width, 1, con, g);
-        draw_screen(
-            BORDER_COLOR,
-            0,
-            self.board_height - 1,
-            self.board_width,
-            1,
-            con,
-            g,
-        );
-        draw_screen(BORDER_COLOR, 0, 0, 1, self.board_height, con, g);
-        draw_screen(
-            BORDER_COLOR,
-            self.board_width - 1,
-            0,
-            1,
-            self.board_height,
-            con,
-            g,
-        );
+        // Draw top and bottom borders
+        for x in 0..self.board_width {
+            // Top border
+            Image::new()
+                .rect([to_coord_u32(x) as f64, 0.0, BLOCK_SIZE, BLOCK_SIZE])
+                .draw(
+                    &self.board_textures.border,
+                    &con.draw_state,
+                    con.transform,
+                    g,
+                );
+            // Bottom border
+            Image::new()
+                .rect([
+                    to_coord_u32(x) as f64,
+                    to_coord_u32(self.board_height - 1) as f64,
+                    BLOCK_SIZE,
+                    BLOCK_SIZE,
+                ])
+                .draw(
+                    &self.board_textures.border,
+                    &con.draw_state,
+                    con.transform,
+                    g,
+                );
+        }
+
+        // Draw left and right borders
+        for y in 0..self.board_height {
+            // Left border
+            Image::new()
+                .rect([0.0, to_coord_u32(y) as f64, BLOCK_SIZE, BLOCK_SIZE])
+                .draw(
+                    &self.board_textures.border,
+                    &con.draw_state,
+                    con.transform,
+                    g,
+                );
+            // Right border
+            Image::new()
+                .rect([
+                    to_coord_u32(self.board_width - 1) as f64,
+                    to_coord_u32(y) as f64,
+                    BLOCK_SIZE,
+                    BLOCK_SIZE,
+                ])
+                .draw(
+                    &self.board_textures.border,
+                    &con.draw_state,
+                    con.transform,
+                    g,
+                );
+        }
 
         // Calculate parameters for drawing score
         let score_text = format!("Score: {}", self.score);
@@ -1203,7 +1267,7 @@ impl Game {
         let mut new_x = rng.random_range(1..self.board_width - 1);
         let mut new_y = rng.random_range(1..self.board_height - 1);
 
-        // If food is eaten, generate new random position for food
+        // If new food position overlaps with snake, generate new random positions
         while self.snake.overlap_body(new_x, new_y) {
             new_x = rng.random_range(1..self.board_width - 1);
             new_y = rng.random_range(1..self.board_height - 1);
@@ -1257,8 +1321,8 @@ impl Game {
         self.score = 0;
 
         self.food_exists = true;
-        self.food_x = 6;
-        self.food_y = 4;
+        self.food_x = food_randomizer(self.board_width);
+        self.food_y = food_randomizer(self.board_height);
 
         self.game_state = GameState::Playing;
         // self.game_settings = GameSettings::default();
