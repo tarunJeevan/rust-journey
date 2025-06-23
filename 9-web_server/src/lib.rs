@@ -1,8 +1,5 @@
 use std::{
-    sync::{
-        Arc, Mutex,
-        mpsc::{self, Receiver},
-    },
+    sync::{Arc, Mutex, mpsc},
     thread,
 };
 
@@ -10,7 +7,7 @@ type Job = Box<dyn FnOnce() + Send + 'static>;
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
-    sender: mpsc::Sender<Job>,
+    sender: Option<mpsc::Sender<Job>>,
 }
 
 impl ThreadPool {
@@ -34,7 +31,10 @@ impl ThreadPool {
             workers.push(Worker::new(id, Arc::clone(&receiver)));
         }
 
-        ThreadPool { workers, sender }
+        ThreadPool {
+            workers,
+            sender: Some(sender),
+        }
     }
 
     /// Sends the enclosed closure to an available thread. If no thread is available, closure is queued.
@@ -44,13 +44,27 @@ impl ThreadPool {
     {
         let job = Box::new(f);
 
-        self.sender.send(job).unwrap();
+        self.sender.as_ref().unwrap().send(job).unwrap();
+    }
+}
+
+impl Drop for ThreadPool {
+    fn drop(&mut self) {
+        // Drop sender to close channel
+        drop(self.sender.take());
+
+        // Drop workers
+        for worker in self.workers.drain(..) {
+            println!("Shutting down worker {}", worker.id);
+
+            worker.thread.join().unwrap();
+        }
     }
 }
 
 struct Worker {
     id: usize,
-    thread: thread::JoinHandle<Arc<Mutex<Receiver<Job>>>>,
+    thread: thread::JoinHandle<()>,
 }
 
 impl Worker {
@@ -58,12 +72,20 @@ impl Worker {
         let thread = thread::spawn(move || {
             loop {
                 // Retrieve closure from channel
-                let job = receiver.lock().unwrap().recv().unwrap();
+                let message = receiver.lock().unwrap().recv();
 
-                println!("Worker {id} got a job. Executing...");
+                match message {
+                    Ok(job) => {
+                        println!("Worker {id} got a job. Executing...");
 
-                // Execute closure
-                job();
+                        // Execute closure
+                        job();
+                    }
+                    Err(_) => {
+                        eprintln!("Worker {id} disconnected. Shutting down...");
+                        break;
+                    }
+                }
             }
         }); // NOTE: Use thread::Builder instead
         Worker { id, thread }
