@@ -1,6 +1,7 @@
 use std::{
+    collections::HashMap,
     fs,
-    io::{BufRead, BufReader, Write},
+    io::{BufRead, BufReader, Read, Write},
     net::{TcpListener, TcpStream},
     path::Path,
 };
@@ -24,18 +25,29 @@ fn main() {
 }
 
 fn handle_connection(mut stream: TcpStream) {
-    let buf_reader = BufReader::new(&stream);
+    // Get all lines from stream
+    let mut buf_reader = BufReader::new(&stream);
+    let lines: Vec<_> = buf_reader.by_ref().lines().map_while(Result::ok).collect();
+
     // Get request line
-    let request_line = buf_reader.lines().next().unwrap().unwrap_or_else(|err| {
-        eprintln!("Error reading request line: {err}");
-        String::new()
-    });
+    let request_line = &lines[0];
 
     // Parse request line into method, path, and version
     let mut parts = request_line.split_whitespace();
     let method = parts.next().unwrap();
     let path = parts.next().unwrap();
-    let _version = parts.next().unwrap(); // Unnecessary
+    let _version = parts.next().unwrap(); // Version is unnecessary
+
+    // Retrieve request headers
+    let mut headers = HashMap::new();
+    for line in &lines[1..] {
+        if line.is_empty() {
+            break;
+        };
+        if let Some((key, value)) = line.split_once(": ") {
+            headers.insert(key.to_string(), value.to_string());
+        }
+    }
 
     // Construct response based on request
     let (status_line, filename) = route(method, path);
@@ -66,8 +78,11 @@ fn route(method: &str, path: &str) -> (&'static str, String) {
 
     match method {
         "OPTIONS" => {
-            // TODO: Return allowed HTTP request methods
-            todo!()
+            // Return allowed HTTP request methods
+            (
+                "HTTP/1.1 204 NO CONTENT\r\nAllow: GET, POST, PUT, DELETE, OPTIONS\r\n\r\n",
+                String::new(),
+            )
         }
         "GET" => {
             // Return requested resource/data if it exists or return error page
@@ -82,16 +97,43 @@ fn route(method: &str, path: &str) -> (&'static str, String) {
             todo!()
         }
         "PUT" => {
-            // TODO: Handle creating new resource or modifying existing resource SAFELY (Idempotent)
-            todo!()
+            // Create new resource or modify existing resource SAFELY (Idempotent)
+            let put_path = format!("public{}", path);
+
+            if let Err(e) = fs::write(&put_path, "TODO: Get response body first") {
+                eprintln!("Error writing file: {e}");
+                (
+                    "HTTP/1.1 500 INTERNAL SERVER ERROR",
+                    "public/500.html".to_string(),
+                )
+            } else {
+                ("HTTP/1.1 201 CREATED", put_path)
+            }
         }
         "DELETE" => {
-            // TODO: Handle deleting a resource SAFELY (Idempotent)
-            todo!()
+            // Delete a resource SAFELY (Idempotent)
+
+            // Check if file-to-delete exists
+            if Path::new(&file_path).exists() {
+                if let Err(e) = fs::remove_file(&file_path) {
+                    // Error deleting file
+                    eprintln!("File deletion error: {e}");
+                    (
+                        "HTTP/1.1 500 INTERNAL SERVER ERROR",
+                        "public/500.html".to_string(),
+                    )
+                } else {
+                    // Delete successful
+                    ("HTTP/1.1 200 OK", "public/delete_success.html".to_string())
+                }
+            } else {
+                // File-to-delete not found
+                ("HTTP/1.1 404 NOT FOUND", "public/404.html".to_string())
+            }
         }
         _ => {
-            // TODO: Return invalid request method
-            todo!()
+            // Return invalid request method
+            ("HTTP/1.1 405 NOT ALLOWED", "public/405.html".to_string())
         }
     }
 }
