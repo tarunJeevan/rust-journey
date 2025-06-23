@@ -11,7 +11,7 @@ use web_server::ThreadPool;
 fn main() {
     // Create TCP listener bound to localhost on port 7878
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap(); // TODO: Handle possible error case
-    let pool = ThreadPool::new(4);
+    let pool = ThreadPool::new(5);
 
     for stream in listener.incoming() {
         let stream = stream.unwrap();
@@ -71,13 +71,18 @@ fn handle_connection(mut stream: TcpStream) {
 
     // Construct response based on request
     let (status_line, filename, response_body) = route(method, path, &body);
-    let contents = if !response_body.is_empty() {
-        response_body
-    } else {
-        fs::read_to_string(filename).unwrap_or_else(|err| {
-            eprintln!("Error reading file to string: {err}");
+
+    let contents = if response_body.is_empty() {
+        if filename.is_empty() {
             String::new()
-        })
+        } else {
+            fs::read_to_string(filename).unwrap_or_else(|err| {
+                eprintln!("Error reading file to string: {err}");
+                String::new()
+            })
+        }
+    } else {
+        response_body
     };
     let content_len = contents.len();
 
@@ -116,7 +121,7 @@ fn route(method: &str, path: &str, body: &[u8]) -> (&'static str, String, String
             } else {
                 (
                     "HTTP/1.1 404 NOT FOUND",
-                    "public/404.html".to_string(),
+                    "public/error/404.html".to_string(),
                     String::new(),
                 )
             }
@@ -131,7 +136,7 @@ fn route(method: &str, path: &str, body: &[u8]) -> (&'static str, String, String
                 eprintln!("Error writing file: {e}");
                 (
                     "HTTP/1.1 500 INTERNAL SERVER ERROR",
-                    "public/500.html".to_string(),
+                    "public/error/500.html".to_string(),
                     String::new(),
                 )
             } else {
@@ -147,14 +152,14 @@ fn route(method: &str, path: &str, body: &[u8]) -> (&'static str, String, String
                     eprintln!("File deletion error: {e}");
                     (
                         "HTTP/1.1 500 INTERNAL SERVER ERROR",
-                        "public/500.html".to_string(),
+                        "public/error/500.html".to_string(),
                         String::new(),
                     )
                 } else {
                     // Delete successful
                     (
                         "HTTP/1.1 200 OK",
-                        "public/delete_success.html".to_string(),
+                        "public/delete-success.html".to_string(),
                         String::new(),
                     )
                 }
@@ -162,7 +167,7 @@ fn route(method: &str, path: &str, body: &[u8]) -> (&'static str, String, String
                 // File-to-delete not found
                 (
                     "HTTP/1.1 404 NOT FOUND",
-                    "public/404.html".to_string(),
+                    "public/error/404.html".to_string(),
                     String::new(),
                 )
             }
@@ -171,7 +176,7 @@ fn route(method: &str, path: &str, body: &[u8]) -> (&'static str, String, String
             // Return invalid request method
             (
                 "HTTP/1.1 405 NOT ALLOWED",
-                "public/405.html".to_string(),
+                "public/error/405.html".to_string(),
                 String::new(),
             )
         }
