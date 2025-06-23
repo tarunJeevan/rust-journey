@@ -13,7 +13,7 @@ pub struct ThreadPool {
 impl ThreadPool {
     /// Creates a new ThreadPool.
     ///
-    /// The size is the number of threads in the pool.
+    /// The `size` is the number of threads in the pool.
     ///
     /// # Panics
     ///
@@ -38,6 +38,8 @@ impl ThreadPool {
     }
 
     /// Sends the enclosed closure to an available thread. If no thread is available, closure is queued.
+    ///
+    /// Takes a closure `f`
     pub fn execute<F>(&self, f: F)
     where
         F: FnOnce() + Send + 'static,
