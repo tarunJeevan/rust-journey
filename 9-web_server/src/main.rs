@@ -8,6 +8,24 @@ use std::{
 
 use web_server::ThreadPool;
 
+struct Response {
+    status_line: String,
+    headers: Vec<(String, String)>,
+    body: String,
+}
+
+impl Response {
+    fn stringify(&self) -> String {
+        let headers = self
+            .headers
+            .iter()
+            .map(|(k, v)| format!("{}: {}", k, v))
+            .collect::<Vec<_>>()
+            .join("\r\n");
+        format!("{}\r\n{}\r\n\r\n{}", self.status_line, headers, self.body)
+    }
+}
+
 fn main() {
     // Create TCP listener bound to localhost on port 7878
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap(); // TODO: Handle possible error case
@@ -30,44 +48,13 @@ fn main() {
 fn handle_connection(mut stream: TcpStream) {
     // Get all lines from stream
     let mut buf_reader = BufReader::new(&stream);
-    let mut lines = Vec::new();
-    let mut request_line = String::new();
-
-    // Read the request line
-    buf_reader.read_line(&mut request_line).unwrap();
-    lines.push(request_line.trim_end().to_string());
-
-    // Read headers
-    let mut headers = HashMap::new();
-    let mut line = String::new();
-    loop {
-        line.clear();
-        buf_reader.read_line(&mut line).unwrap();
-        let trimmed = line.trim_end();
-        if trimmed.is_empty() {
-            break;
-        }
-        if let Some((key, value)) = line.split_once(": ") {
-            headers.insert(key.to_string(), value.to_string());
-        }
-        lines.push(trimmed.to_string());
-    }
+    let (request_line, headers, body) = parse_request(&mut buf_reader);
 
     // Parse request line into method, path, and version
-    let mut parts = lines[0].split_whitespace();
+    let mut parts = request_line.split_whitespace();
     let method = parts.next().unwrap();
     let path = parts.next().unwrap();
     let _version = parts.next().unwrap(); // Version is unnecessary
-
-    // Read request body if present
-    let mut body = Vec::new();
-    if let Some(cl) = headers.get("Content-Length") {
-        if let Ok(content_length) = cl.parse::<usize>() {
-            let mut body_buf = vec![0; content_length];
-            buf_reader.read_exact(&mut body_buf).unwrap_or(());
-            body = body_buf;
-        }
-    }
 
     // Construct response based on request
     let (status_line, filename, response_body) = route(method, path, &body);
@@ -92,6 +79,48 @@ fn handle_connection(mut stream: TcpStream) {
     stream
         .write_all(response.as_bytes())
         .unwrap_or_else(|err| eprintln!("Error sending response: {err}"));
+}
+
+/// Parses HTTP request from client
+///
+/// The `buf_reader` is a buffered reader containing the `TcpStream` for easier processing
+///
+/// Returns a tuple containing the start line, headers, and body from the processed request
+fn parse_request(
+    buf_reader: &mut BufReader<&TcpStream>,
+) -> (String, HashMap<String, String>, Vec<u8>) {
+    let mut request_line = String::new();
+
+    // Read the request line
+    buf_reader.read_line(&mut request_line).unwrap();
+
+    // Read headers
+    let mut headers = HashMap::new();
+    let mut line = String::new();
+    loop {
+        line.clear();
+        buf_reader.read_line(&mut line).unwrap();
+        let trimmed = line.trim_end();
+        if trimmed.is_empty() {
+            break;
+        }
+        if let Some((key, value)) = line.split_once(": ") {
+            headers.insert(key.to_string(), value.to_string());
+        }
+    }
+
+    // Read request body if present
+    let mut body = Vec::new();
+    if let Some(cl) = headers.get("Content-Length") {
+        if let Ok(content_length) = cl.parse::<usize>() {
+            let mut body_buf = vec![0; content_length];
+            buf_reader.read_exact(&mut body_buf).unwrap_or(());
+            body = body_buf;
+        }
+    }
+
+    // Return tuple containing parsed info
+    (request_line, headers, body)
 }
 
 /// Handles routing based on HTTP method and requested path
@@ -180,5 +209,119 @@ fn route(method: &str, path: &str, body: &[u8]) -> (&'static str, String, String
                 String::new(),
             )
         }
+    }
+    // NOTE: Create Response struct to be returned by route()?
+}
+
+/// Handles `OPTIONS` request
+///
+/// Returns response start line and header detailing permitted HTTP request methods
+fn options() -> Response {
+    Response {
+        status_line: "HTTP/1.1 204 No Content".to_string(),
+        headers: vec![(
+            "Allow".to_string(),
+            "GET, POST, PUT, DELETE, OPTIONS".to_string(),
+        )],
+        body: String::new(),
+    }
+}
+
+/// Handles `GET` requests
+///
+/// The `path` is the path to the requested resource
+///
+/// Returns a tuple containing response start line and file path of the requested resource
+fn get(path: &str) -> Response {
+    // Return requested resource/data if it exists or return error page
+    if Path::new(&path).exists() {
+        let body = fs::read_to_string(path).unwrap_or_else(|err| {
+            eprintln!("Error reading file to string: {err}");
+            String::new()
+        });
+        Response {
+            status_line: "HTTP/1.1 200 OK".to_string(),
+            headers: vec![("Content-Length".to_string(), body.len().to_string())],
+            body,
+        }
+    } else {
+        let body = fs::read_to_string("public/error/404.html").unwrap_or_else(|err| {
+            eprintln!("Error reading error file to string: {err}");
+            String::new()
+        });
+        Response {
+            status_line: "HTTP/1.1 404 Not Found".to_string(),
+            headers: vec![("Content-Length".to_string(), body.len().to_string())],
+            body,
+        }
+    }
+}
+
+/// Handles `POST` requests
+///
+/// The `path` is the ? and `body` is the submitted data
+///
+/// Returns a tuple containing response start line (and ?)
+fn post(path: &str, body: &[u8]) -> &'static str {
+    // NOTE: Determine return type
+    todo!()
+}
+
+/// Handles `PUT` requests
+///
+/// The `path` is the resource to be created/modified and `body` is the submitted data
+///
+/// Returns a tuple containing response start line and file path of created/modified resource
+fn put<'a>(path: &'a str, body: &[u8]) -> (&'static str, &'a str) {
+    let mut status_line = String::new();
+    let mut body = String::new();
+    // Check if resource exists
+    if Path::new(&path).exists() {
+        // File exists so modify it
+        if let Err(e) = fs::write(path, body) {
+            eprintln!("Error writing file: {e}");
+            (
+                "HTTP/1.1 500 Internal Server Error",
+                "public/error/500.html",
+            )
+        } else {
+            ("HTTP/1.1 204 No Content", path)
+        }
+    }
+    // File doesn't exist so create it
+    else if let Err(e) = fs::write(path, body) {
+        eprintln!("Error writing file: {e}");
+        (
+            "HTTP/1.1 500 Internal Server Error",
+            "public/error/500.html",
+        )
+    } else {
+        ("HTTP/1.1 201 Created", path)
+    }
+}
+
+/// Handles `DELETE` requests
+///
+/// The `path` is the resource to be deleted
+///
+/// Returns a tuple containing response start line and redirection file path (empty `&str` if successful)
+fn delete(path: &str) -> (&'static str, &str) {
+    // Check if file-to-delete exists
+    if Path::new(&path).exists() {
+        if let Err(e) = fs::remove_file(path) {
+            // Error deleting file
+            eprintln!("File deletion error: {e}");
+            (
+                "HTTP/1.1 500 Internal Server Error",
+                "public/error/500.html",
+            )
+        } else {
+            // Delete successful
+            ("HTTP/1.1 204 No Content", "")
+            // NOTE: In calling code check path and refresh page on successful deletion
+        }
+    } else {
+        // File-to-delete not found
+        ("HTTP/1.1 404 Not Found", "public/error/404.html")
     }
 }
