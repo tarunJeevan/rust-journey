@@ -272,31 +272,53 @@ fn post(path: &str, body: &[u8]) -> &'static str {
 /// The `path` is the resource to be created/modified and `body` is the submitted data
 ///
 /// Returns a tuple containing response start line and file path of created/modified resource
-fn put<'a>(path: &'a str, body: &[u8]) -> (&'static str, &'a str) {
+fn put<'a>(path: &'a str, body: &[u8]) -> Response {
     let mut status_line = String::new();
-    let mut body = String::new();
+    let mut contents = String::new();
+
     // Check if resource exists
     if Path::new(&path).exists() {
         // File exists so modify it
-        if let Err(e) = fs::write(path, body) {
+        fs::write(path, body).unwrap_or_else(|e| {
+            // Internal error while modifying file
             eprintln!("Error writing file: {e}");
-            (
-                "HTTP/1.1 500 Internal Server Error",
-                "public/error/500.html",
-            )
-        } else {
-            ("HTTP/1.1 204 No Content", path)
-        }
+            status_line = "HTTP/1.1 500 Internal Server Error".to_string();
+            contents = fs::read_to_string("public/error/500.html").unwrap_or_else(|err| {
+                eprintln!("Error reading error file to string: {err}");
+                String::new()
+            });
+        });
+        // Successfully modified
+        status_line = "HTTP/1.1 200 OK".to_string();
+        contents = fs::read_to_string(path).unwrap_or_else(|err| {
+            eprintln!("Error reading file to string: {err}");
+            String::new()
+        });
     }
     // File doesn't exist so create it
-    else if let Err(e) = fs::write(path, body) {
-        eprintln!("Error writing file: {e}");
-        (
-            "HTTP/1.1 500 Internal Server Error",
-            "public/error/500.html",
-        )
-    } else {
-        ("HTTP/1.1 201 Created", path)
+    else {
+        fs::write(path, body).unwrap_or_else(|e| {
+            // Internal error while creating file
+            eprintln!("Error writing file: {e}");
+            status_line = "HTTP/1.1 500 Internal Server Error".to_string();
+            contents = fs::read_to_string("public/error/500.html").unwrap_or_else(|err| {
+                eprintln!("Error reading error file to string: {err}");
+                String::new()
+            });
+        });
+        // Successfully created
+        status_line = "HTTP/1.1 201 Created".to_string();
+        contents = fs::read_to_string(path).unwrap_or_else(|err| {
+            eprintln!("Error reading file to string: {err}");
+            String::new()
+        });
+    }
+
+    // Construct and return response
+    Response {
+        status_line,
+        headers: vec![("Content-Length".to_string(), contents.len().to_string())],
+        body: contents,
     }
 }
 
@@ -305,23 +327,35 @@ fn put<'a>(path: &'a str, body: &[u8]) -> (&'static str, &'a str) {
 /// The `path` is the resource to be deleted
 ///
 /// Returns a tuple containing response start line and redirection file path (empty `&str` if successful)
-fn delete(path: &str) -> (&'static str, &str) {
+fn delete(path: &str) -> Response {
+    let mut status_line = String::new();
+    let mut body = String::new();
+
     // Check if file-to-delete exists
     if Path::new(&path).exists() {
-        if let Err(e) = fs::remove_file(path) {
-            // Error deleting file
+        fs::remove_file(path).unwrap_or_else(|e| {
             eprintln!("File deletion error: {e}");
-            (
-                "HTTP/1.1 500 Internal Server Error",
-                "public/error/500.html",
-            )
-        } else {
-            // Delete successful
-            ("HTTP/1.1 204 No Content", "")
-            // NOTE: In calling code check path and refresh page on successful deletion
-        }
+            status_line = "HTTP/1.1 500 Internal Server Error".to_string();
+            body = fs::read_to_string("public/error/500.html").unwrap_or_else(|err| {
+                eprintln!("Error reading error file to string: {err}");
+                String::new()
+            });
+        });
+        status_line = "HTTP/1.1 204 No Content".to_string();
+        // NOTE: In calling code check path and refresh page on successful deletion
     } else {
         // File-to-delete not found
-        ("HTTP/1.1 404 Not Found", "public/error/404.html")
+        status_line = "HTTP/101 404 Not Found".to_string();
+        body = fs::read_to_string("public/error/404.html").unwrap_or_else(|err| {
+            eprintln!("Error reading error file to string: {err}");
+            String::new()
+        });
+    }
+
+    // Construct and return response
+    Response {
+        status_line,
+        headers: vec![("Content-Length".to_string(), body.len().to_string())],
+        body,
     }
 }
