@@ -1,14 +1,14 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 use super::http::*;
 
 pub struct Request {
     protocol: String,
     method: HttpMethod,
-    resource: String,
+    resource: PathBuf,
     queries: HashMap<String, String>,
     headers: HashMap<String, String>,
-    body: String,
+    body: Vec<u8>,
 }
 
 impl Default for Request {
@@ -16,10 +16,10 @@ impl Default for Request {
         Request {
             protocol: String::from("HTTP/1.1"),
             method: HttpMethod::None,
-            resource: String::from(""),
+            resource: PathBuf::new(),
             queries: HashMap::new(),
             headers: HashMap::new(),
-            body: String::from(""),
+            body: vec![],
         }
     }
 }
@@ -50,9 +50,9 @@ impl Request {
 
             // Set resource
             self.resource = if path == "/" {
-                "public/index.html".to_string()
+                PathBuf::from("public/index.html")
             } else {
-                format!("public{}", path)
+                PathBuf::from(format!("public{}", path))
             };
 
             // Set queries
@@ -70,9 +70,41 @@ impl Request {
     /// Processes and appends a given header into the headers HashMap
     ///
     /// The `line` is a String line from the headers section from a BufReader
-    pub fn append_header(&mut self, line: String) {
+    pub fn append_header(&mut self, line: &str) {
         if let Some((key, value)) = line.split_once(": ") {
             self.headers.insert(key.to_string(), value.to_string());
         };
+    }
+
+    /// Sets the body field of the Request
+    ///
+    /// The `contents` is an array slice containing all the bytes in the request body
+    pub fn set_body(&mut self, contents: &[u8]) {
+        self.body = contents.to_vec();
+    }
+
+    /// Returns a reference to the HttpMethod of the Request
+    pub fn get_method(&self) -> &HttpMethod {
+        &self.method
+    }
+
+    /// Returns a reference to the target resource of the Request
+    pub fn get_resource(&self) -> &PathBuf {
+        &self.resource
+    }
+
+    /// Returns a reference to the queries, if any, of the Request
+    pub fn get_queries(&self) -> &HashMap<String, String> {
+        &self.queries
+    }
+
+    /// Returns a reference to the headers of the Request
+    pub fn get_headers(&self) -> &HashMap<String, String> {
+        &self.headers
+    }
+
+    /// Returns a reference to the body, if any, of the Request
+    pub fn get_body(&self) -> &[u8] {
+        &self.body
     }
 }
