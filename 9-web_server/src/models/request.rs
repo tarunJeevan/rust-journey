@@ -29,7 +29,7 @@ impl Request {
     ///
     /// The `status_line` is a String containing a request's status line
     pub fn parse_status_line(&mut self, status_line: String) {
-        let mut chunks = status_line.split(" ");
+        let mut chunks = status_line.split_whitespace();
 
         // Set method
         self.method = match chunks.next() {
@@ -44,35 +44,46 @@ impl Request {
             None => HttpMethod::None,
         };
 
-        // If request method is GET, parse resource for queries
-        if let HttpMethod::Get = self.method {
-            let (path, query_string) = chunks.next().unwrap().split_once("?").unwrap();
-
-            // Set resource
-            self.resource = if path == "/" {
-                PathBuf::from("public/index.html")
+        // Parse resource for queries
+        let (path, query_string) = if let Some(target) = chunks.next() {
+            // Check if resource has queries
+            if let Some((p, q)) = target.split_once("?") {
+                (p, q)
             } else {
-                PathBuf::from(format!("public{}", path))
-            };
+                (target, "")
+            }
+        } else {
+            ("", "")
+        };
 
-            // Set queries
-            let queries_list = query_string.split("&");
-            for query in queries_list {
-                let (key, value) = query.split_once("=").unwrap();
-                self.queries.insert(key.to_string(), value.to_string());
+        // Set resource
+        self.resource = if path == "/" {
+            PathBuf::from("public/index.html")
+        } else {
+            PathBuf::from(format!("public{}", path))
+        };
+
+        // Set queries
+        self.queries.clear();
+        if !query_string.is_empty() {
+            for query in query_string.split("&") {
+                let mut kv = query.splitn(2, "=");
+                if let (Some(key), Some(value)) = (kv.next(), kv.next()) {
+                    self.queries.insert(key.to_owned(), value.to_owned());
+                }
             }
         }
 
         // Set protocol
-        self.protocol = chunks.next().unwrap().to_string();
+        self.protocol = chunks.next().unwrap_or("").to_owned();
     }
 
     /// Processes and appends a given header into the headers HashMap
     ///
     /// The `line` is a String line from the headers section from a BufReader
     pub fn append_header(&mut self, line: &str) {
-        if let Some((key, value)) = line.split_once(": ") {
-            self.headers.insert(key.to_string(), value.to_string());
+        if let Some((key, value)) = line.split_once(":") {
+            self.headers.insert(key.to_lowercase(), value.to_owned());
         };
     }
 

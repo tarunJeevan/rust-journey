@@ -12,6 +12,18 @@
                 "rust"
             ],
             "preLaunchTask": "cargo build (snake game)"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Web Server",
+            "program": "${workspaceFolder}/9-web_server/target/debug/web_server",
+            "args": [],
+            "cwd": "w${workspaceFolder}/9-web_server",
+            "sourceLanguages": [
+                "rust"
+            ],
+            "preLaunchTask": "cargo build (web server)"
         }
     ]
 }

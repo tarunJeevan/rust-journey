@@ -14,6 +14,6 @@ pub enum HttpProtocol {
 
 impl Default for HttpProtocol {
     fn default() -> Self {
-        HttpProtocol::Default("HTTP/1.1".to_string())
+        HttpProtocol::Default("HTTP/1.1".to_owned())
     }
 }

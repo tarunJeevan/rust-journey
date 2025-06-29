@@ -1,4 +1,6 @@
-use std::{fs, path::Path};
+use std::{fs, path::Path, time::SystemTime};
+
+use httpdate::fmt_http_date;
 
 use crate::models::{HttpMethod, Request, Response};
 
@@ -43,16 +45,16 @@ pub fn route(req: Request) -> Response {
 ///
 /// Returns a `Response` containing `Allow` header detailing permitted HTTP request methods
 fn options() -> Response {
-    // Request {
-    //     status_line: "HTTP/1.1 204 No Content".to_string(),
-    //     headers: vec![(
-    //         "Allow".to_string(),
-    //         "GET, POST, PUT, DELETE, OPTIONS".to_string(),
-    //     )],
-    //     body: String::new(),
-    // }
+    // Construct response
+    let mut res = Response::default();
+    res.set_status(204);
+    res.add_header((
+        "Allow".to_owned(),
+        "GET, POST, PUT, DELETE, OPTIONS".to_owned(),
+    ));
 
-    Response::default()
+    // Return response
+    res
 }
 
 /// Handles `GET` requests
@@ -61,30 +63,48 @@ fn options() -> Response {
 ///
 /// Returns a `Response` containing the file path of the requested resource
 fn get(path: &Path) -> Response {
+    // Initialize response
+    let mut res = Response::default();
+
+    // Set Date header
+    res.add_header(set_date_header());
+
     // Return requested resource/data if it exists or return error page
     if path.exists() {
-        let _body = fs::read_to_string(path).unwrap_or_else(|err| {
+        let contents = fs::read_to_string(path).unwrap_or_else(|err| {
             eprintln!("Error reading file to string: {err}");
             String::new()
         });
-        // Request {
-        //     status_line: "HTTP/1.1 200 OK".to_string(),
-        //     headers: vec![("Content-Length".to_string(), body.len().to_string())],
-        //     body,
-        // }
-        Response::default()
+        // Set status line
+        res.set_status(200);
+
+        // Set headers
+        res.add_header(("Content-Length".to_owned(), contents.len().to_string()));
+        // TODO: Add Content-Type?
+
+        // Set body
+        res.set_body(contents);
     } else {
-        let _body = fs::read_to_string("public/error/404.html").unwrap_or_else(|err| {
+        let contents = fs::read_to_string("public/error/404.html").unwrap_or_else(|err| {
             eprintln!("Error reading error file to string: {err}");
             String::new()
         });
-        // Request {
-        //     status_line: "HTTP/1.1 404 Not Found".to_string(),
-        //     headers: vec![("Content-Length".to_string(), body.len().to_string())],
-        //     body,
-        // }
-        Response::default()
+        // Set status line
+        res.set_status(404);
+
+        // Set headers
+        res.add_header(("Content-Length".to_owned(), contents.len().to_string()));
+        // TODO: Add Content-Type?
+
+        // Set body
+        res.set_body(contents);
     }
+    for (key, value) in res.get_headers() {
+        println!("{}: {}", key, value);
+    }
+
+    // Return response
+    res
 }
 
 /// Handles `POST` requests
@@ -102,8 +122,11 @@ fn post(_path: &Path, _body: &[u8]) -> Response {
 ///
 /// Returns a `Response` containing the file path of created/modified resource
 fn put(path: &Path, body: &[u8]) -> Response {
-    let mut status_line = String::new();
-    let mut contents = String::new();
+    // Initialize response
+    let mut res = Response::default();
+
+    // Set Date header
+    res.add_header(set_date_header());
 
     // Check if resource exists
     if path.exists() {
@@ -111,45 +134,77 @@ fn put(path: &Path, body: &[u8]) -> Response {
         fs::write(path, body).unwrap_or_else(|e| {
             // Internal error while modifying file
             eprintln!("Error writing file: {e}");
-            status_line = "HTTP/1.1 500 Internal Server Error".to_string();
-            contents = fs::read_to_string("public/error/500.html").unwrap_or_else(|err| {
+            let contents = fs::read_to_string("public/error/500.html").unwrap_or_else(|err| {
                 eprintln!("Error reading error file to string: {err}");
                 String::new()
             });
+
+            // Set status line
+            res.set_status(500);
+
+            // Set headers
+            res.add_header(("Content-Length".to_owned(), contents.len().to_string()));
+            // TODO: Add Content-Type?
+
+            // Set body
+            res.set_body(contents);
         });
         // Successfully modified
-        status_line = "HTTP/1.1 200 OK".to_string();
-        contents = fs::read_to_string(path).unwrap_or_else(|err| {
+        let contents = fs::read_to_string(path).unwrap_or_else(|err| {
             eprintln!("Error reading file to string: {err}");
             String::new()
         });
+
+        // Set status line
+        res.set_status(200);
+
+        // Set headers
+        res.add_header(("Content-Length".to_owned(), contents.len().to_string()));
+        // TODO: Add Content-Type?
+
+        // Set body
+        res.set_body(contents);
     }
     // File doesn't exist so create it
     else {
         fs::write(path, body).unwrap_or_else(|e| {
             // Internal error while creating file
             eprintln!("Error writing file: {e}");
-            status_line = "HTTP/1.1 500 Internal Server Error".to_string();
-            contents = fs::read_to_string("public/error/500.html").unwrap_or_else(|err| {
+
+            let contents = fs::read_to_string("public/error/500.html").unwrap_or_else(|err| {
                 eprintln!("Error reading error file to string: {err}");
                 String::new()
             });
+
+            // Set status line
+            res.set_status(500);
+
+            // Set headers
+            res.add_header(("Content-Length".to_owned(), contents.len().to_string()));
+            // TODO: Add Content-Type?
+
+            // Set body
+            res.set_body(contents);
         });
         // Successfully created
-        status_line = "HTTP/1.1 201 Created".to_string();
-        contents = fs::read_to_string(path).unwrap_or_else(|err| {
+        let contents = fs::read_to_string(path).unwrap_or_else(|err| {
             eprintln!("Error reading error file to string: {err}");
             String::new()
         });
+
+        // Set status line
+        res.set_status(201);
+
+        // Set headers
+        res.add_header(("Content-Length".to_owned(), contents.len().to_string()));
+        // TODO: Add Content-Type?
+
+        // Set body
+        res.set_body(contents);
     }
 
-    // Construct and return response
-    // Request {
-    //     status_line,
-    //     headers: vec![("Content-Length".to_string(), contents.len().to_string())],
-    //     body: contents,
-    // }
-    Response::default()
+    // Return response
+    res
 }
 
 /// Handles `DELETE` requests
@@ -158,35 +213,57 @@ fn put(path: &Path, body: &[u8]) -> Response {
 ///
 /// Returns a `Response` containing the redirection file path (empty `String` if successful)
 fn delete(path: &Path) -> Response {
-    let mut status_line = String::new();
-    let mut body = String::new();
+    // Initialize response
+    let mut res = Response::default();
 
     // Check if file-to-delete exists
     if path.exists() {
         fs::remove_file(path).unwrap_or_else(|e| {
             eprintln!("File deletion error: {e}");
-            status_line = "HTTP/1.1 500 Internal Server Error".to_string();
-            body = fs::read_to_string("public/error/500.html").unwrap_or_else(|err| {
+
+            // Send error page
+            let contents = fs::read_to_string("public/error/500.html").unwrap_or_else(|err| {
                 eprintln!("Error reading error file to string: {err}");
                 String::new()
             });
+
+            // Set status line
+            res.set_status(500);
+
+            // Set headers
+            res.add_header(("Content-Length".to_owned(), contents.len().to_string()));
+            // TODO: Add Content-Type?
+
+            // Set body
+            res.set_body(contents);
         });
-        status_line = "HTTP/1.1 204 No Content".to_string();
+        // File successfully deleted
+        res.set_status(204);
         // NOTE: In calling code check path and refresh page on successful deletion
     } else {
         // File-to-delete not found
-        status_line = "HTTP/101 404 Not Found".to_string();
-        body = fs::read_to_string("public/error/404.html").unwrap_or_else(|err| {
+        let contents = fs::read_to_string("public/error/404.html").unwrap_or_else(|err| {
             eprintln!("Error reading error file to string: {err}");
             String::new()
         });
+
+        // Set status line
+        res.set_status(404);
+
+        // Set headers
+        res.add_header(("Content-Length".to_owned(), contents.len().to_string()));
+        // TODO: Add Content-Type?
+
+        // Set body
+        res.set_body(contents);
     }
 
-    // Construct and return response
-    // Request {
-    //     status_line,
-    //     headers: vec![("Content-Length".to_string(), body.len().to_string())],
-    //     body,
-    // }
-    Response::default()
+    // Return response
+    res
+}
+
+// Helper function to set Date header for Response
+fn set_date_header() -> (String, String) {
+    let now = SystemTime::now();
+    ("Date".to_owned(), fmt_http_date(now))
 }

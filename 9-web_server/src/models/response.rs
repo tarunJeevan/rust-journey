@@ -36,9 +36,9 @@ impl Response {
             "{} {} {}\r\n{}\r\n\r\n{}",
             self.protocol,
             self.status_code.unwrap_or(0),
-            self.description.unwrap_or("".to_string()),
+            self.description.unwrap_or("".to_owned()),
             headers,
-            self.body.unwrap_or("".to_string())
+            self.body.unwrap_or("".to_owned())
         )
     }
 
@@ -48,45 +48,64 @@ impl Response {
     pub fn set_status(&mut self, code: usize) {
         self.status_code = match code {
             200 => {
-                self.description = Some("OK".to_string());
+                self.description = Some("OK".to_owned());
                 Some(200)
             }
             201 => {
-                self.description = Some("Created".to_string());
+                self.description = Some("Created".to_owned());
                 Some(201)
             }
             202 => {
-                self.description = Some("Accepted".to_string());
+                self.description = Some("Accepted".to_owned());
                 Some(202)
             }
             204 => {
-                self.description = Some("No Content".to_string());
+                self.description = Some("No Content".to_owned());
                 Some(204)
             }
             400 => {
-                self.description = Some("Bad Request".to_string());
+                self.description = Some("Bad Request".to_owned());
                 Some(400)
             }
             403 => {
-                self.description = Some("Forbidden".to_string());
+                self.description = Some("Forbidden".to_owned());
                 Some(403)
             }
             404 => {
-                self.description = Some("Not Found".to_string());
+                self.description = Some("Not Found".to_owned());
                 Some(404)
             }
             500 => {
-                self.description = Some("Internal Server Error".to_string());
+                self.description = Some("Internal Server Error".to_owned());
                 Some(500)
             }
             _ => None,
         }
     }
 
+    pub fn get_headers(&self) -> &HashMap<String, String> {
+        &self.headers
+    }
+
     /// Loads the contents to be sent to client into the `body` field
     ///
     /// The `contents` is the String to be sent to the client
-    pub fn set_body(&mut self, _contents: String) {
-        todo!()
+    pub fn set_body(&mut self, contents: String) {
+        self.body = Some(contents);
+    }
+
+    /// Adds a header to the calling Response
+    ///
+    /// The `header` is a tuple containing the key-value pair to be added
+    pub fn add_header(&mut self, header: (String, String)) {
+        let (key, value) = header;
+        self.headers.insert(key, value);
+    }
+
+    /// Sets the protocol field of the calling Response
+    ///
+    /// The `proto` is the protocol to be set. The default is `HTTP/1.1`
+    pub fn set_protocol(&mut self, proto: String) {
+        self.protocol = proto;
     }
 }
