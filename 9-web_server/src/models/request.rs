@@ -57,10 +57,11 @@ impl Request {
         };
 
         // Set resource
+        // TODO: What to do if path is empty?
         self.resource = if path == "/" {
             PathBuf::from("public/index.html")
         } else {
-            PathBuf::from(format!("public{}", path))
+            PathBuf::from(format!("public{path}"))
         };
 
         // Set queries
@@ -81,7 +82,7 @@ impl Request {
     /// Processes and appends a given header into the headers HashMap
     ///
     /// The `line` is a String line from the headers section from a BufReader
-    pub fn append_header(&mut self, line: &str) {
+    pub fn append_header(&mut self, line: String) {
         if let Some((key, value)) = line.split_once(":") {
             self.headers.insert(key.to_lowercase(), value.to_owned());
         };

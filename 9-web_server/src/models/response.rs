@@ -27,19 +27,29 @@ impl Response {
         let headers = self
             .headers
             .iter()
-            .map(|(k, v)| format!("{}: {}", k, v))
+            .map(|(k, v)| format!("{k}: {v}"))
             .collect::<Vec<_>>()
             .join("\r\n");
 
         // Construct response string
-        format!(
-            "{} {} {}\r\n{}\r\n\r\n{}",
-            self.protocol,
-            self.status_code.unwrap_or(0),
-            self.description.unwrap_or("".to_owned()),
-            headers,
-            self.body.unwrap_or("".to_owned())
-        )
+        if self.body.is_some() {
+            format!(
+                "{} {} {}\r\n{}\r\n\r\n{}",
+                self.protocol,
+                self.status_code.unwrap(),
+                self.description.unwrap(),
+                headers,
+                self.body.unwrap_or("".to_owned())
+            )
+        } else {
+            format!(
+                "{} {} {}\r\n{}\r\n",
+                self.protocol,
+                self.status_code.unwrap(),
+                self.description.unwrap(),
+                headers,
+            )
+        }
     }
 
     /// Sets the `status_code` and `description` fields
@@ -62,6 +72,10 @@ impl Response {
             204 => {
                 self.description = Some("No Content".to_owned());
                 Some(204)
+            }
+            303 => {
+                self.description = Some("See Other".to_owned());
+                Some(303)
             }
             400 => {
                 self.description = Some("Bad Request".to_owned());
@@ -90,8 +104,8 @@ impl Response {
     /// Loads the contents to be sent to client into the `body` field
     ///
     /// The `contents` is the String to be sent to the client
-    pub fn set_body(&mut self, contents: String) {
-        self.body = Some(contents);
+    pub fn set_body(&mut self, contents: Option<String>) {
+        self.body = contents;
     }
 
     /// Adds a header to the calling Response

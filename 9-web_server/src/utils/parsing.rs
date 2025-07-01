@@ -23,7 +23,7 @@ pub fn parse_request(buf_reader: &mut BufReader<&TcpStream>) -> Request {
     loop {
         line.clear();
         buf_reader.read_line(&mut line).unwrap();
-        let trimmed = line.trim_end();
+        let trimmed = line.trim_end().to_lowercase();
 
         if trimmed.is_empty() {
             break;
@@ -32,7 +32,7 @@ pub fn parse_request(buf_reader: &mut BufReader<&TcpStream>) -> Request {
     }
 
     // Read request body if present
-    if let Some(cl) = req.get_headers().get("Content-Length") {
+    if let Some(cl) = req.get_headers().get("content-length") {
         if let Ok(content_length) = cl.parse::<usize>() {
             let mut body_buf = vec![0; content_length];
             buf_reader.read_exact(&mut body_buf).unwrap_or(());
