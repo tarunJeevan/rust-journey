@@ -18,6 +18,24 @@
             "problemMatcher": [
                 "$rustc"
             ]
+        },
+        {
+            "label": "cargo build (web server)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "build"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/9-web_server"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$rustc"
+            ]
         }
     ]
 }

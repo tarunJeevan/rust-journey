@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test HTTP Methods</title>
+</head>
+
+<body>
+    <h1>Testing implemented HTTP methods!</h1>
+    <!-- TODO: Use fetch() to send requests with different methods with attached form data -->
+    <form id="post-test-form" method="post" action="/">
+        <label for="username">Enter username: </label>
+        <input type="text" name="username" id="username" required>
+
+        <br><br>
+
+        <label for="email">Enter email: </label>
+        <input type="email" name="email" id="email" required>
+
+        <br><br>
+
+        <label for="password">Enter password: </label>
+        <input type="text" name="password" id="password" required>
+
+        <br><br>
+
+        <label for="birthdate">Enter DoB: </label>
+        <input type="date" name="birthdate" id="birthdate" required>
+
+        <br><br>
+
+        <label for="age">Enter age: </label>
+        <input type="number" name="age" id="age" min="1" max="150" required>
+
+        <br><br>
+
+        <button type="submit" id="post-btn">Send POST</button>
+    </form>
+
+    <br><br>
+
+    <div id="put-test-block">
+        <label for="header">Enter header: </label>
+        <input type="text" name="header" id="header" required>
+
+        <br><br>
+
+        <label for="paragraph">Enter paragraph: </label>
+        <textarea name="paragraph" id="paragraph" required></textarea>
+
+        <br><br>
+
+        <button type="button" id="put-btn" onclick="sendPut(event);">Send PUT</button>
+    </div>
+
+    <br><br>
+
+    <form id="delete-test-form">
+        <label for="filename">Enter file to delete: </label>
+        <input type="text" name="filename" id="filename">
+
+        <button type="button" id="delete-btn" onclick="sendDelete(event);">Send DELETE</button>
+    </form>
+</body>
+
+<script>
+    function sendPost(event) {
+        event.preventDefault();
+        const form = document.getElementById("test-form");
+
+        const username = form.elements.username.value;
+        const email = form.elements.email.value;
+        const password = form.elements.password.value;
+        const birthdate = form.elements.birthdate.value;
+        const age = form.elements.age.value;
+
+        const params = new URLSearchParams({
+            username,
+            email,
+            password,
+            birthdate,
+            age
+        });
+
+        const body = `username=${encodeURIComponent(username)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&birthdate=${encodeURIComponent(birthdate)}&age=${encodeURIComponent(age)}`;
+
+        fetch("/", {
+            method: "POST",
+            body,
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Content-Length": body.length
+            }
+        })
+            .then(response => response.text())
+            .then(data => alert("POST response: " + data))
+            .catch(err => alert("POST error: " + err));
+    }
+
+    function sendPut(event) {
+        event.preventDefault();
+
+        const header = document.getElementById("header").value;
+        const paragraph = document.getElementById("paragraph").value;
+
+        let body = `<h1>${header}</h1><br><br><p>${paragraph}</p>`;
+
+        fetch(`/${encodeURIComponent(header)}.html`, {
+            method: "PUT",
+            body,
+            headers: {
+                "Content-Type": "text/html",
+                "Content-Length": body.length
+            }
+        });
+    }
+
+    function sendDelete(event) {
+        event.preventDefault();
+        const form = document.getElementById("delete-test-form");
+
+        const filename = form.elements.filename.value;
+
+        fetch(`/${filename}.html`, {
+            method: "DELETE"
+        });
+    }
+</script>
+
+</html>

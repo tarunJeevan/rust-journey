@@ -1,15 +1,17 @@
 use std::{
-    fs,
-    io::{BufRead, BufReader, Write},
+    io::{BufReader, Write},
     net::{TcpListener, TcpStream},
 };
 
-use web_server::ThreadPool;
+use web_server::{
+    models::ThreadPool,
+    utils::{parse_request, route},
+};
 
 fn main() {
     // Create TCP listener bound to localhost on port 7878
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap(); // TODO: Handle possible error case
-    let pool = ThreadPool::new(4);
+    let pool = ThreadPool::new(50);
 
     for stream in listener.incoming() {
         let stream = stream.unwrap();
@@ -18,33 +20,22 @@ fn main() {
             handle_connection(stream);
         });
     }
-
-    println!("Shutting down...");
 }
 
+/// Handles each request from client
+///
+/// The `stream` is the TcpStream containing the HTTP request
 fn handle_connection(mut stream: TcpStream) {
-    let buf_reader = BufReader::new(&stream);
-    // Get request line
-    let request_line = buf_reader.lines().next().unwrap().unwrap_or_else(|err| {
-        eprintln!("Error reading request line: {err}");
-        String::new()
-    });
+    // Get all lines from stream
+    let mut buf_reader = BufReader::new(&stream);
+    let req = parse_request(&mut buf_reader);
 
     // Construct response based on request
-    let (status_line, filename) = match &request_line[..] {
-        "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "index.html"),
-        _ => ("HTTP/1.1 404 NOT FOUND", "404.html"),
-    };
-    let contents = fs::read_to_string(filename).unwrap_or_else(|err| {
-        eprintln!("Error reading file to string: {err}");
-        String::new()
-    });
-    let content_len = contents.len();
-
-    let response = format!("{status_line}\r\nContent-Length: {content_len}\r\n\r\n{contents}");
+    let res = route(req);
 
     // Send response
     stream
-        .write_all(response.as_bytes())
+        .write_all(res.stringify().as_bytes())
         .unwrap_or_else(|err| eprintln!("Error sending response: {err}"));
+    // NOTE: Flush stream after?
 }
