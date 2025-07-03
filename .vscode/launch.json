@@ -19,7 +19,7 @@
             "name": "Debug Web Server",
             "program": "${workspaceFolder}/9-web_server/target/debug/web_server",
             "args": [],
-            "cwd": "w${workspaceFolder}/9-web_server",
+            "cwd": "${workspaceFolder}/9-web_server",
             "sourceLanguages": [
                 "rust"
             ],
