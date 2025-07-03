@@ -57,8 +57,7 @@ impl Request {
         };
 
         // Set resource
-        // TODO: What to do if path is empty?
-        self.resource = if path == "/" {
+        self.resource = if path.is_empty() || path == "/" {
             PathBuf::from("public/index.html")
         } else {
             PathBuf::from(format!("public{path}"))
@@ -84,7 +83,8 @@ impl Request {
     /// The `line` is a String line from the headers section from a BufReader
     pub fn append_header(&mut self, line: String) {
         if let Some((key, value)) = line.split_once(":") {
-            self.headers.insert(key.to_lowercase(), value.to_owned());
+            self.headers
+                .insert(key.trim().to_lowercase(), value.trim().to_owned());
         };
     }
 

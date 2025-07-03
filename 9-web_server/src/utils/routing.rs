@@ -9,8 +9,8 @@ use crate::models::{HttpMethod, Request, Response};
 /// The `method` is the HTTP request method, `path` is the requested path, and `body` is the request body (may be empty)
 pub fn route(req: Request) -> Response {
     // Check if request path is valid
-    if !req.get_resource().is_file() {
-        return handle_bad_request("Requested resource must be a file");
+    if req.get_resource().extension().is_none() {
+        return handle_bad_request("Request target must be a file");
     }
 
     match req.get_method() {
@@ -217,7 +217,7 @@ fn post(req: Request) -> Response {
                 res.set_status(303);
 
                 // Set headers
-                let redirect = Path::new("public/post-success.txt");
+                let redirect = Path::new("/post-success.txt");
                 res.add_header(get_content_type(redirect));
                 res.add_header((
                     "Location".to_owned(),
@@ -229,6 +229,7 @@ fn post(req: Request) -> Response {
                 todo!("miltipart/form-data not implemented yet")
             }
             "text/plain" | "application/octet-stream" => {
+                // NOTE: Do something with data
                 // Write data to file
                 if let Some(error_file) =
                     write_to_file(Path::new("public/post-success.txt"), req.get_body())
@@ -250,7 +251,7 @@ fn post(req: Request) -> Response {
                 res.set_status(303);
 
                 // Set headers
-                let redirect = Path::new("public/post-success.txt");
+                let redirect = Path::new("/post-success.txt");
                 res.add_header(get_content_type(redirect));
                 res.add_header((
                     "Location".to_owned(),
@@ -299,19 +300,14 @@ fn put(req: Request) -> Response {
         }
 
         // Successfully modified
-        let contents = read_file(path.to_str().unwrap_or("error"));
-
         // Set status line
-        res.set_status(200);
+        res.set_status(204);
 
         // Set headers
-        if let Some(content) = &contents {
-            res.add_header(get_content_type(path));
-            res.add_header(("Content-Length".to_owned(), content.len().to_string()));
-        }
-
-        // Set body
-        res.set_body(contents);
+        res.add_header((
+            "Content-Location".to_owned(),
+            path.to_str().map(|v| v.to_owned()).unwrap(),
+        ));
     }
     // File doesn't exist so create it
     else {
@@ -329,19 +325,19 @@ fn put(req: Request) -> Response {
         }
 
         // Successfully created
-        let contents = read_file(path.to_str().unwrap_or("error"));
-
         // Set status line
         res.set_status(201);
 
-        // Set headers
-        if let Some(content) = &contents {
-            res.add_header(get_content_type(path));
-            res.add_header(("Content-Length".to_owned(), content.len().to_string()));
-        }
+        // Get path of new resource for client
+        let new_path = path
+            .file_name()
+            .map(|v| v.to_str())
+            .unwrap()
+            .unwrap()
+            .to_owned();
 
-        // Set body
-        res.set_body(contents);
+        // Set headers
+        res.add_header(("Location".to_owned(), format!("/{new_path}")));
     }
 
     // Return response
