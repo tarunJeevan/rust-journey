@@ -4,6 +4,7 @@ extern crate rand;
 
 mod draw;
 mod game;
+mod score;
 mod snake;
 
 use std::collections::HashMap;
