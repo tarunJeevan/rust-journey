@@ -7,11 +7,11 @@ mod game;
 mod score;
 mod snake;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
 use piston_window::{
-    Button, Flip, PistonWindow, PressEvent, Texture, TextureSettings, UpdateEvent, WindowSettings,
-    clear, types::Color,
+    Button, CloseEvent, Flip, PistonWindow, PressEvent, Texture, TextureSettings, UpdateEvent,
+    WindowSettings, clear, types::Color,
 };
 
 use draw::to_coord_u32;
@@ -19,10 +19,12 @@ use game::{Game, GameState};
 
 use crate::{
     game::{BoardTextures, FoodTextures, SnakeTextures},
+    score::Leaderboard,
     snake::{BodyOrientation, Direction},
 };
 
 const BACK_COLOR: Color = [0.5, 0.5, 0.5, 1.0]; // Game board background color
+const LEADERBOARD_PATH: &str = "leaderboard.json";
 
 // Load game board textures
 fn load_board_textures(window: &mut PistonWindow) -> BoardTextures {
@@ -157,7 +159,18 @@ fn main() {
     let food_textures = load_food_textures(&mut window);
     let board_textures = load_board_textures(&mut window);
 
-    let mut game = Game::new(width, height, snake_textures, food_textures, board_textures);
+    // Initialize leaderboard
+    let leaderboard = Leaderboard::load(Path::new(LEADERBOARD_PATH));
+
+    // Initialize game instance
+    let mut game = Game::new(
+        width,
+        height,
+        snake_textures,
+        food_textures,
+        board_textures,
+        leaderboard,
+    );
 
     // Load font for text rendering
     let assets = find_folder::Search::ParentsThenKids(3, 3)
@@ -172,6 +185,16 @@ fn main() {
     let mut glyphs_regular = window.load_font(font_regular).unwrap();
 
     while let Some(event) = window.next() {
+        // Gracefully handle window close event
+        event.close(|_| {
+            // Save leaderboard before exiting
+            game.get_leaderboard()
+                .save(Path::new(LEADERBOARD_PATH))
+                .unwrap_or_else(|err| {
+                    eprintln!("Error saving leaderboard: {err}");
+                })
+        });
+
         // Use match to handle all game states
         match game.get_game_state() {
             GameState::MainMenu => {
@@ -282,6 +305,30 @@ fn main() {
                     glyphs_light.factory.encoder.flush(device);
                     glyphs_regular.factory.encoder.flush(device);
                 });
+                // Handle key binding logic
+                if let Some(Button::Keyboard(key)) = event.press_args() {
+                    game.key_pressed(key);
+                }
+            }
+            GameState::Naming => {
+                // Draw name entering screen
+                window.draw_2d(&event, |c, g, device| {
+                    clear(BACK_COLOR, g);
+                    game.draw_naming(&c, g, &mut glyphs_bold, &mut glyphs_light);
+                    // Flush glyphs to the device
+                    glyphs_bold.factory.encoder.flush(device);
+                    glyphs_light.factory.encoder.flush(device);
+                });
+                // NOTE: Method 1 is to use Into to convert Event into Input. Needs testing
+                // let test: Option<Input> = event.into();
+                // NOTE: Method 2 is to get text_args() from Event. Needs testing
+                // let test = event.text_args();
+
+                // Check for text input and pass to handler if present
+                if let Some(piston_window::Input::Text(text)) = event.clone().into() {
+                    game.handle_text_input(text);
+                }
+
                 // Handle key binding logic
                 if let Some(Button::Keyboard(key)) = event.press_args() {
                     game.key_pressed(key);

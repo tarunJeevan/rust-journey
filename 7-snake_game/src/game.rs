@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
 use crate::draw::{
-    BLOCK_SIZE, draw_button, draw_food, draw_screen, draw_tiled_background, to_coord_u32,
+    BLOCK_SIZE, Rect, draw_button, draw_food, draw_input_field, draw_screen, draw_tiled_background,
+    to_coord_u32,
 };
+use crate::score::Leaderboard;
 use crate::snake::{BodyOrientation, Direction, Snake};
 
 use piston_window::{CharacterCache, G2dTexture, Image};
@@ -12,6 +14,7 @@ use rand::{Rng, rng};
 const GAMEOVER_COLOR: Color = [0.9, 0.0, 0.0, 0.5]; // Gameover's RGB color
 const PAUSE_COLOR: Color = [0.0, 0.0, 0.0, 0.5]; // Pause screen overlay RGB color
 const MENU_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Settings screen RGB color
+const NAMING_COLOR: Color = [0.0, 0.7, 0.0, 0.5]; // Naming screen RGB color
 const FONT_DEFAULT_COLOR: Color = [1.0, 1.0, 1.0, 1.0]; // Default font color
 const MAIN_MENU_FONT_SELECTED_COLOR: Color = [0.7, 0.0, 0.0, 1.0]; // Selected font color for main menu
 const GAMEOVER_FONT_SELECTED_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Selected font color in game over screen
@@ -46,6 +49,7 @@ pub enum GameState {
     GameOver,
     Settings,
     KeyBinding,
+    Naming,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -148,7 +152,8 @@ fn food_randomizer(range: i32) -> i32 {
 pub struct Game {
     snake: Snake,
     waiting_time: f64,
-    score: i32,
+    score: u32,
+    leaderboard: Leaderboard,
 
     snake_textures: SnakeTextures,
     food_textures: FoodTextures,
@@ -165,6 +170,13 @@ pub struct Game {
     game_state: GameState,
     game_settings: GameSettings,
     waiting_for_key: Option<&'static str>, // Used to listen for key input
+    player_name_input: String,             // Holds player name input
+
+    main_menu_size: usize,        // Number of main menu options
+    game_over_menu_size: usize,   // Number of game over menu options
+    pause_menu_size: usize,       // Number of pause menu options
+    settings_menu_size: usize,    // Number of settings menu options
+    key_binding_menu_size: usize, // Number of key bindings menu options
 
     main_menu_selected: usize,   // Index of selected menu item in main menu
     game_over_selected: usize,   // Index of selected menu item in game over screen
@@ -180,11 +192,13 @@ impl Game {
         snake_textures: SnakeTextures,
         food_textures: FoodTextures,
         board_textures: BoardTextures,
+        leaderboard: Leaderboard,
     ) -> Game {
         Game {
             snake: Snake::new(2, 2),
             waiting_time: 0.0,
             score: 0,
+            leaderboard,
 
             snake_textures,
             food_textures,
@@ -201,6 +215,13 @@ impl Game {
             game_state: GameState::MainMenu, // Start with main menu
             game_settings: GameSettings::default(),
             waiting_for_key: None, // No key is being waited for
+            player_name_input: String::new(),
+
+            main_menu_size: 0,
+            game_over_menu_size: 0,
+            pause_menu_size: 0,
+            settings_menu_size: 0,
+            key_binding_menu_size: 0,
 
             main_menu_selected: 0, // Start with first option selected in main menu
             game_over_selected: 0, // Start with first option selected in game over screen
@@ -222,15 +243,13 @@ impl Game {
                     }
                 }
                 Key::Down => {
-                    if self.main_menu_selected < 2 {
-                        // NOTE: Assuming 3 menu options
+                    if self.main_menu_selected < self.main_menu_size - 1 {
                         self.main_menu_selected += 1;
                     }
                 }
                 Key::Right => {
                     // Alternative to Down key for navigating through options
-                    if self.main_menu_selected < 2 {
-                        // NOTE: Assuming 3 menu options
+                    if self.main_menu_selected < self.main_menu_size - 1 {
                         self.main_menu_selected += 1;
                     }
                 }
@@ -243,6 +262,7 @@ impl Game {
                 Key::Return => {
                     // Select chosen option
                     match self.main_menu_selected {
+                        // FIXME: Make modular
                         0 => {
                             // Start new game
                             self.restart();
@@ -301,15 +321,13 @@ impl Game {
                     }
                 }
                 Key::Down => {
-                    if self.pause_selected < 1 {
-                        // NOTE: Assuming 2 menu options
+                    if self.pause_selected < self.pause_menu_size - 1 {
                         self.pause_selected += 1;
                     }
                 }
                 Key::Right => {
                     // Alternative to Down key for navigating through options
-                    if self.pause_selected < 1 {
-                        // NOTE: Assuming 2 menu options
+                    if self.pause_selected < self.pause_menu_size - 1 {
                         self.pause_selected += 1;
                     }
                 }
@@ -322,6 +340,7 @@ impl Game {
                 Key::Return => {
                     // Select chosen option
                     match self.pause_selected {
+                        // FIXME: Make more modular
                         0 => {
                             // Go to main menu
                             self.game_state = GameState::MainMenu;
@@ -348,15 +367,13 @@ impl Game {
                     }
                 }
                 Key::Down => {
-                    if self.game_over_selected < 3 {
-                        // NOTE: Assuming 4 menu options
+                    if self.game_over_selected < self.game_over_menu_size - 1 {
                         self.game_over_selected += 1;
                     }
                 }
                 Key::Right => {
                     // Alternative to Down key for navigating through options
-                    if self.game_over_selected < 3 {
-                        // NOTE: Assuming 4 menu options
+                    if self.game_over_selected < self.game_over_menu_size - 1 {
                         self.game_over_selected += 1;
                     }
                 }
@@ -369,6 +386,7 @@ impl Game {
                 Key::Return => {
                     // Select chosen option
                     match self.game_over_selected {
+                        // FIXME: Make more modular
                         0 => {
                             // Restart game
                             self.restart();
@@ -399,14 +417,12 @@ impl Game {
                     }
                 }
                 Key::Down => {
-                    if self.settings_selected < 2 {
-                        // NOTE: Assuming 3 menu options
+                    if self.settings_selected < self.settings_menu_size - 1 {
                         self.settings_selected += 1;
                     }
                 }
                 Key::Right => {
-                    if self.settings_selected < 2 {
-                        // NOTE: Assuming 3 menu options
+                    if self.settings_selected < self.settings_menu_size - 1 {
                         self.settings_selected += 1;
                     }
                 }
@@ -418,6 +434,7 @@ impl Game {
                 Key::Return => {
                     // Select chosen option
                     match self.settings_selected {
+                        // FIXME: Make more modular
                         0 => {
                             // Cycle through snake speeds
                             self.game_settings.snake_speed = self.game_settings.snake_speed.next();
@@ -448,14 +465,12 @@ impl Game {
                     }
                 }
                 Key::Down => {
-                    if self.key_binding_selected < 4 {
-                        // NOTE: Assuming 5 menu options
+                    if self.key_binding_selected < self.key_binding_menu_size - 1 {
                         self.key_binding_selected += 1;
                     }
                 }
                 Key::Right => {
-                    if self.key_binding_selected < 4 {
-                        // NOTE: Assuming 5 menu options
+                    if self.key_binding_selected < self.key_binding_menu_size - 1 {
                         self.key_binding_selected += 1;
                     }
                 }
@@ -496,6 +511,45 @@ impl Game {
                     }
                 }
             },
+            // Handle naming a game instance
+            GameState::Naming => match key {
+                Key::Backspace => {
+                    // Remove last character from player_name_input if it's not empty
+                    self.player_name_input.pop();
+                }
+                Key::Return => {
+                    // Save name to savefile
+                    if self.player_name_input.len() == 3 {
+                        // Add score to leaderboard
+                        self.leaderboard
+                            .add_score(&self.player_name_input, self.score);
+                        // Switch to game over state
+                        self.game_state = GameState::GameOver;
+                    } else {
+                        // TODO: Warn players on-screen that name must be exactly 3 letters
+                    }
+                }
+                Key::Tab => {
+                    // Go to Main Menu
+                    self.game_state = GameState::MainMenu;
+                }
+                _ => {}
+            },
+        }
+    }
+
+    // Handle player name input
+    pub fn handle_text_input(&mut self, input: String) {
+        // Check that game is in Naming state
+        if let GameState::Naming = self.game_state {
+            for c in input.chars() {
+                // Only allow alphanumeric characters
+                // NOTE: Consider using c.is_ascii_alphanumeric() if needed
+                if c.is_alphanumeric() && self.player_name_input.len() < 3 {
+                    // Add character to name
+                    self.player_name_input.push(c);
+                }
+            }
         }
     }
 
@@ -597,7 +651,7 @@ impl Game {
 
     // Draw pause screen
     pub fn draw_pause(
-        &self,
+        &mut self,
         con: &Context,
         g: &mut G2d,
         title_glyphs: &mut Glyphs,
@@ -659,6 +713,9 @@ impl Game {
 
         // Draw menu options as buttons
         let menu_options = ["Main Menu", "Quit"];
+        // Set pause_menu_size
+        self.pause_menu_size = menu_options.len();
+
         let option_font_size = 16;
 
         // Calculate button dimensions and positions
@@ -682,10 +739,7 @@ impl Game {
             // Draw option background rectangle to represent button
             draw_button(
                 button_color,
-                button_x,
-                button_y,
-                button_width,
-                button_height,
+                Rect::new(button_x, button_y, button_width, button_height),
                 con,
                 g,
             );
@@ -716,7 +770,7 @@ impl Game {
 
     // Draw settings screen
     pub fn draw_settings(
-        &self,
+        &mut self,
         con: &Context,
         g: &mut G2d,
         title_glyphs: &mut Glyphs,
@@ -791,6 +845,9 @@ impl Game {
             ),
             ("Key Bindings: ", "Customize".to_string()),
         ];
+        // Set settings_menu_size
+        self.settings_menu_size = menu_options.len();
+
         let option_font_size = 16;
         let row_height = 40.0;
         let start_y = 180.0;
@@ -820,7 +877,12 @@ impl Game {
             };
 
             // Draw button
-            draw_button(button_color, right_margin, y - 25.0, 150.0, 40.0, con, g);
+            draw_button(
+                button_color,
+                Rect::new(right_margin, y - 25.0, 150.0, 40.0),
+                con,
+                g,
+            );
 
             let option_color = if i == self.settings_selected {
                 MAIN_MENU_FONT_SELECTED_COLOR // Highlight color for selected option
@@ -843,7 +905,7 @@ impl Game {
 
     // Draw game over screen
     pub fn draw_game_over(
-        &self,
+        &mut self,
         con: &Context,
         g: &mut G2d,
         title_glyphs: &mut Glyphs,
@@ -880,6 +942,10 @@ impl Game {
 
         // Draw menu options as buttons
         let menu_options = ["Restart", "Main Menu", "Settings", "Quit"];
+
+        // Set game_over_menu_size
+        self.game_over_menu_size = menu_options.len();
+
         let option_font_size = 16;
 
         // Calculate button dimensions and positions
@@ -903,10 +969,7 @@ impl Game {
             // Draw option background rectangle to represent button
             draw_button(
                 button_color,
-                button_x,
-                button_y,
-                button_width,
-                button_height,
+                Rect::new(button_x, button_y, button_width, button_height),
                 con,
                 g,
             );
@@ -937,7 +1000,7 @@ impl Game {
 
     // Draw key bindings overlay
     pub fn draw_key_bindings(
-        &self,
+        &mut self,
         con: &Context,
         g: &mut G2d,
         title_glyphs: &mut Glyphs,
@@ -1028,6 +1091,9 @@ impl Game {
                 format!("{:.?}", self.game_settings.key_bindings.pause),
             ),
         ];
+        // Set key_bindings_menu_size
+        self.key_binding_menu_size = menu_options.len();
+
         let option_font_size = 16;
         let row_height = 40.0;
         let start_y = 240.0;
@@ -1057,7 +1123,12 @@ impl Game {
             };
 
             // Draw button
-            draw_button(button_color, right_margin, y - 25.0, 150.0, 40.0, con, g);
+            draw_button(
+                button_color,
+                Rect::new(right_margin, y - 25.0, 150.0, 40.0),
+                con,
+                g,
+            );
 
             // Highlight selected option
             let option_color = if i == self.key_binding_selected {
@@ -1081,7 +1152,7 @@ impl Game {
 
     // Draw main menu
     pub fn draw_main_menu(
-        &self,
+        &mut self,
         con: &Context,
         g: &mut G2d,
         title_glyphs: &mut Glyphs,
@@ -1140,6 +1211,9 @@ impl Game {
 
         // Draw menu options as buttons
         let menu_options = ["Start Game", "Settings", "Quit"];
+        // Set main_menu_size
+        self.main_menu_size = menu_options.len();
+
         let option_font_size = 16;
 
         // Calculate button dimensions and positions
@@ -1163,10 +1237,7 @@ impl Game {
             // Draw option background rectangle to represent button
             draw_button(
                 button_color,
-                button_x,
-                button_y,
-                button_width,
-                button_height,
+                Rect::new(button_x, button_y, button_width, button_height),
                 con,
                 g,
             );
@@ -1195,6 +1266,95 @@ impl Game {
         }
     }
 
+    // Draw naming screen
+    pub fn draw_naming(
+        &self,
+        con: &Context,
+        g: &mut G2d,
+        title_glyphs: &mut Glyphs,
+        text_glyphs: &mut Glyphs,
+    ) {
+        draw_screen(
+            NAMING_COLOR, // Background color
+            0,
+            0,
+            self.board_width,
+            self.board_height,
+            con,
+            g,
+        );
+
+        // Calculate parameters for drawing title
+        let title = "Save";
+        let title_font_size = 48;
+        let title_width = title_glyphs.width(title_font_size, title).unwrap_or(0.0);
+
+        // Calculate title text position for centering
+        let title_x = (self.board_width as f64 * BLOCK_SIZE - title_width) / 2.0;
+        let title_y = 80.0; // Position from the top
+
+        // Draw title text
+        Text::new_color(FONT_DEFAULT_COLOR, title_font_size)
+            .draw(
+                title,
+                title_glyphs,
+                &con.draw_state,
+                con.transform.trans(title_x, title_y),
+                g,
+            )
+            .unwrap();
+
+        // Calculate parameters for drawing instructions text
+        let instructions = [
+            "Enter a 3-letter name (alphanumeric) to save your score",
+            "Press 'Backspace' to delete previous character",
+            "Press 'Enter/Return' to submit name",
+            "Press 'Tab' to return to Main Menu",
+        ];
+        let instructions_font_size = 12;
+
+        for (i, instruction) in instructions.iter().enumerate() {
+            let instruction_width = text_glyphs
+                .width(instructions_font_size, instruction)
+                .unwrap_or(0.0);
+
+            // Calculate intro text position for centering
+            let intro_x = (self.board_width as f64 * BLOCK_SIZE - instruction_width) / 2.0;
+            let intro_y = 120.0 + i as f64 * 20.0; // Position from the top
+
+            // Draw instruction text
+            Text::new_color(FONT_DEFAULT_COLOR, instructions_font_size)
+                .draw(
+                    instruction,
+                    text_glyphs,
+                    &con.draw_state,
+                    con.transform.trans(intro_x, intro_y),
+                    g,
+                )
+                .unwrap();
+        }
+
+        // Calculate input field coordinates
+        let field_width = 220.0;
+        let field_height = 70.0;
+        let field_x = (self.board_width as f64 * BLOCK_SIZE - field_width) / 2.0;
+        let field_y = 250.0;
+
+        // Blinking cursor. Show/hide basedon waiting_time
+        let show_cursor = ((self.waiting_time * 2.0) as u64) % 2 == 0;
+
+        // Draw input field
+        draw_input_field(
+            show_cursor,
+            &self.player_name_input,
+            title_glyphs,
+            FONT_DEFAULT_COLOR,
+            Rect::new(field_x, field_y, field_width, field_height),
+            con,
+            g,
+        );
+    }
+
     // Update game state over time
     pub fn update(&mut self, delta_time: f64) {
         self.waiting_time += delta_time;
@@ -1213,6 +1373,10 @@ impl Game {
         self.game_state.clone()
     }
 
+    // Get current leaderboard
+    pub fn get_leaderboard(&self) -> &Leaderboard {
+        &self.leaderboard
+    }
     // Check if snake has eaten food
     fn check_eating(&mut self) {
         let (head_x, head_y): (i32, i32) = self.snake.head_position();
@@ -1283,8 +1447,8 @@ impl Game {
     fn update_snake(&mut self, dir: Option<Direction>) {
         let (mut next_x, mut next_y) = self.snake.next_head(dir);
 
+        // Wrap around walls if wall wrapping is enabled
         if self.game_settings.wall_wrapping {
-            // Wrap around walls if wall wrapping is enabled
             if next_x <= 0 {
                 next_x = self.board_width - 2; // Wrap to right side
             } else if next_x >= self.board_width - 1 {
@@ -1297,6 +1461,10 @@ impl Game {
             }
             // Check if snake is going to overlap with its body
             if self.snake.overlap_body(next_x, next_y) {
+                // If current score is high enough to enter leaderboard, switch to Naming state
+                if self.leaderboard.can_add_score(self.score) {
+                    self.game_state = GameState::Naming;
+                }
                 self.game_state = GameState::GameOver;
             }
             // Move snake to wrapped position
@@ -1308,6 +1476,10 @@ impl Game {
                 self.snake.move_forward(dir);
                 self.check_eating();
             } else {
+                // If current score is high enough to enter leaderboard, switch to Naming state
+                if self.leaderboard.can_add_score(self.score) {
+                    self.game_state = GameState::Naming;
+                }
                 self.game_state = GameState::GameOver;
             }
             self.waiting_time = 0.0;
@@ -1327,6 +1499,7 @@ impl Game {
         self.game_state = GameState::Playing;
         // self.game_settings = GameSettings::default();
         self.waiting_for_key = None;
+        self.player_name_input = String::new();
 
         self.main_menu_selected = 0;
         self.game_over_selected = 0;
