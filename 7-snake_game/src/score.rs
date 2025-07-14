@@ -26,9 +26,7 @@ impl Leaderboard {
     /// Returns an instance of itself containing the deserialized contents of the savefile or a default instance
     pub fn load(path: &Path) -> Self {
         if let Ok(contents) = fs::read_to_string(path) {
-            if let Ok(leaderboard) = serde_json::from_str(&contents) {
-                leaderboard
-            }
+            return serde_json::from_str(&contents).unwrap_or(Leaderboard::default());
         }
         Leaderboard::default()
     }

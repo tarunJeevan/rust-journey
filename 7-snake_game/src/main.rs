@@ -24,7 +24,7 @@ use crate::{
 };
 
 const BACK_COLOR: Color = [0.5, 0.5, 0.5, 1.0]; // Game board background color
-const LEADERBOARD_PATH: &str = "leaderboard.json";
+pub const LEADERBOARD_PATH: &str = "leaderboard.json";
 
 // Load game board textures
 fn load_board_textures(window: &mut PistonWindow) -> BoardTextures {
@@ -147,12 +147,13 @@ fn main() {
     // Customize game window
     let mut window: PistonWindow =
         WindowSettings::new("Snake Game", [to_coord_u32(width), to_coord_u32(height)])
-            .exit_on_esc(true)
+            .exit_on_esc(false)
             .build()
-            .unwrap(); // FIXME: Return gracefully using error handling. Use unwrap_or_else()?
+            .unwrap();
 
     // TODO: Add color customization in settings
     // TODO: Add mouse inputs for buttons
+    // TODO: Show leaderboard
 
     // Load textures
     let snake_textures = load_snake_textures(&mut window);
@@ -190,9 +191,7 @@ fn main() {
             // Save leaderboard before exiting
             game.get_leaderboard()
                 .save(Path::new(LEADERBOARD_PATH))
-                .unwrap_or_else(|err| {
-                    eprintln!("Error saving leaderboard: {err}");
-                })
+                .unwrap_or_else(|err| eprintln!("Error saving leaderboard: {err}"));
         });
 
         // Use match to handle all game states

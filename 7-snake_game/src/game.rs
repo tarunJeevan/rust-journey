@@ -1,5 +1,7 @@
 use std::collections::HashMap;
+use std::path::Path;
 
+use crate::LEADERBOARD_PATH;
 use crate::draw::{
     BLOCK_SIZE, Rect, draw_button, draw_food, draw_input_field, draw_screen, draw_tiled_background,
     to_coord_u32,
@@ -400,7 +402,10 @@ impl Game {
                             self.game_state = GameState::Settings;
                         }
                         3 => {
-                            // Quit game
+                            // Save leaderboard and quit game
+                            self.leaderboard
+                                .save(Path::new(LEADERBOARD_PATH))
+                                .unwrap_or_else(|err| eprintln!("Error saving leaderboard: {err}"));
                             std::process::exit(0);
                         }
                         _ => {}
@@ -525,8 +530,6 @@ impl Game {
                             .add_score(&self.player_name_input, self.score);
                         // Switch to game over state
                         self.game_state = GameState::GameOver;
-                    } else {
-                        // TODO: Warn players on-screen that name must be exactly 3 letters
                     }
                 }
                 Key::Tab => {
@@ -1377,6 +1380,7 @@ impl Game {
     pub fn get_leaderboard(&self) -> &Leaderboard {
         &self.leaderboard
     }
+
     // Check if snake has eaten food
     fn check_eating(&mut self) {
         let (head_x, head_y): (i32, i32) = self.snake.head_position();
@@ -1464,8 +1468,9 @@ impl Game {
                 // If current score is high enough to enter leaderboard, switch to Naming state
                 if self.leaderboard.can_add_score(self.score) {
                     self.game_state = GameState::Naming;
+                } else {
+                    self.game_state = GameState::GameOver;
                 }
-                self.game_state = GameState::GameOver;
             }
             // Move snake to wrapped position
             self.snake.move_forward_to((next_x, next_y), dir);
@@ -1479,8 +1484,9 @@ impl Game {
                 // If current score is high enough to enter leaderboard, switch to Naming state
                 if self.leaderboard.can_add_score(self.score) {
                     self.game_state = GameState::Naming;
+                } else {
+                    self.game_state = GameState::GameOver;
                 }
-                self.game_state = GameState::GameOver;
             }
             self.waiting_time = 0.0;
         }
