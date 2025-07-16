@@ -17,11 +17,13 @@ const GAMEOVER_COLOR: Color = [0.9, 0.0, 0.0, 0.5]; // Gameover's RGB color
 const PAUSE_COLOR: Color = [0.0, 0.0, 0.0, 0.5]; // Pause screen overlay RGB color
 const MENU_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Settings screen RGB color
 const NAMING_COLOR: Color = [0.0, 0.7, 0.0, 0.5]; // Naming screen RGB color
+const LEADERBOARD_COLOR: Color = [0.0, 0.0, 0.7, 0.5]; // Leaderboard screen RGB color
 const FONT_DEFAULT_COLOR: Color = [1.0, 1.0, 1.0, 1.0]; // Default font color
 const MAIN_MENU_FONT_SELECTED_COLOR: Color = [0.7, 0.0, 0.0, 1.0]; // Selected font color for main menu
 const GAMEOVER_FONT_SELECTED_COLOR: Color = [0.0, 0.0, 0.0, 1.0]; // Selected font color in game over screen
 const BUTTON_SELECTED_COLOR: Color = [0.0, 0.8, 0.5, 1.0]; // Selected button color
 const BUTTON_DEFAULT_COLOR: Color = [0.0, 0.0, 0.0, 0.0]; // Unselected button color
+const LEADERBOARD_ENTRY_COLOR: Color = [0.0, 0.0, 0.5, 0.5]; // Leaderboard entries background color
 
 const SLOW_SNAKE_SPEED: f64 = 0.2; // Slow snake's FPS. Current speed is 5 FPS
 const NORMAL_SNAKE_SPEED: f64 = 0.1; // Snake's FPS. Current speed is 10 FPS
@@ -52,6 +54,7 @@ pub enum GameState {
     Settings,
     KeyBinding,
     Naming,
+    Leaderboard,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -274,7 +277,14 @@ impl Game {
                             self.game_state = GameState::Settings;
                         }
                         2 => {
+                            // Go to leaderboard
+                            self.game_state = GameState::Leaderboard;
+                        }
+                        3 => {
                             // Quit game
+                            self.leaderboard
+                                .save(Path::new(LEADERBOARD_PATH))
+                                .unwrap_or_else(|err| eprintln!("Error saving leaderboard: {err}"));
                             std::process::exit(0);
                         }
                         _ => {}
@@ -538,6 +548,12 @@ impl Game {
                 }
                 _ => {}
             },
+            // Handle leaderboard state key presses
+            GameState::Leaderboard => {
+                if key == Key::Backspace {
+                    self.game_state = GameState::MainMenu;
+                }
+            }
         }
     }
 
@@ -1213,7 +1229,7 @@ impl Game {
             .unwrap();
 
         // Draw menu options as buttons
-        let menu_options = ["Start Game", "Settings", "Quit"];
+        let menu_options = ["Start Game", "Settings", "Leaderboard", "Quit"];
         // Set main_menu_size
         self.main_menu_size = menu_options.len();
 
@@ -1356,6 +1372,142 @@ impl Game {
             con,
             g,
         );
+    }
+
+    // Draw leaderboard screen
+    pub fn draw_leaderboard(
+        &mut self,
+        con: &Context,
+        g: &mut G2d,
+        title_glyphs: &mut Glyphs,
+        text_glyphs: &mut Glyphs,
+        button_glyphs: &mut Glyphs,
+    ) {
+        // Draw background screen
+        draw_screen(
+            LEADERBOARD_COLOR, // Background color
+            0,
+            0,
+            self.board_width,
+            self.board_height,
+            con,
+            g,
+        );
+
+        // Calculate parameters for drawing title
+        let title = "Leaderboard";
+        let title_font_size = 48;
+        let title_width = title_glyphs.width(title_font_size, title).unwrap_or(0.0);
+
+        // Calculate title text position for centering
+        let title_x = (self.board_width as f64 * BLOCK_SIZE - title_width) / 2.0;
+        let title_y = 80.0; // Position from the top
+
+        // Draw title text
+        Text::new_color(FONT_DEFAULT_COLOR, title_font_size)
+            .draw(
+                title,
+                title_glyphs,
+                &con.draw_state,
+                con.transform.trans(title_x, title_y),
+                g,
+            )
+            .unwrap();
+
+        // Calculate parameters for drawing instructions text
+        let instructions = "Press 'Backspace' to return to Main Menu";
+        let instructions_font_size = 12;
+        let instructions_width = text_glyphs
+            .width(instructions_font_size, instructions)
+            .unwrap_or(0.0);
+
+        // Calculate instructions text position for centering
+        let instructions_x = (self.board_width as f64 * BLOCK_SIZE - instructions_width) / 2.0;
+        let instructions_y = 110.0; // Position from the top
+
+        // Draw instructions text
+        Text::new_color(FONT_DEFAULT_COLOR, instructions_font_size)
+            .draw(
+                instructions,
+                text_glyphs,
+                &con.draw_state,
+                con.transform.trans(instructions_x, instructions_y),
+                g,
+            )
+            .unwrap();
+
+        // Calculate entry dimensions and positions
+        let margin_x = 40.0;
+        let entry_width = self.board_width as f64 * BLOCK_SIZE - 2.0 * margin_x;
+        let entry_height = 48.0;
+        let start_y = 180.0;
+        let entry_spacing = 12.0;
+        let entry_font_size = 18;
+
+        // Calculate parameters for drawing leaderboard entries
+        for (i, entry) in self.leaderboard.scores.iter().enumerate() {
+            // Calculate entry position dynamically
+            let entry_x = margin_x;
+            let entry_y = start_y + i as f64 * (entry_height + entry_spacing);
+
+            // Draw entry background rectangle
+            draw_button(
+                LEADERBOARD_ENTRY_COLOR,
+                Rect::new(entry_x, entry_y, entry_width, entry_height),
+                con,
+                g,
+            );
+
+            // Entry details
+            let name = &entry.name;
+            let score = entry.score.to_string();
+            let date = entry.date.format("%m/%d/%Y %H:%M").to_string();
+
+            // Calculate text positions
+            let name_x = entry_x + 16.0;
+            let name_y = entry_y + entry_height / 2.0 + entry_font_size as f64 / 2.5;
+
+            let score_width = button_glyphs.width(entry_font_size, &score).unwrap_or(0.0);
+            let score_x = entry_x + (entry_width - score_width) / 2.0;
+            let score_y = name_y;
+
+            let date_width = button_glyphs.width(entry_font_size, &date).unwrap_or(0.0);
+            let date_x = entry_x + entry_width - date_width - 16.0;
+            let date_y = name_y;
+
+            // Draw name (left)
+            Text::new_color(FONT_DEFAULT_COLOR, entry_font_size)
+                .draw(
+                    name,
+                    button_glyphs,
+                    &con.draw_state,
+                    con.transform.trans(name_x, name_y),
+                    g,
+                )
+                .unwrap();
+
+            // Draw score (center)
+            Text::new_color(FONT_DEFAULT_COLOR, entry_font_size)
+                .draw(
+                    &score,
+                    button_glyphs,
+                    &con.draw_state,
+                    con.transform.trans(score_x, score_y),
+                    g,
+                )
+                .unwrap();
+
+            // Draw date (right)
+            Text::new_color(FONT_DEFAULT_COLOR, entry_font_size)
+                .draw(
+                    &date,
+                    button_glyphs,
+                    &con.draw_state,
+                    con.transform.trans(date_x, date_y),
+                    g,
+                )
+                .unwrap();
+        }
     }
 
     // Update game state over time

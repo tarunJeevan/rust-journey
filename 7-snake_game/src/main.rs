@@ -153,7 +153,6 @@ fn main() {
 
     // TODO: Add color customization in settings
     // TODO: Add mouse inputs for buttons
-    // TODO: Show leaderboard
 
     // Load textures
     let snake_textures = load_snake_textures(&mut window);
@@ -318,17 +317,35 @@ fn main() {
                     glyphs_bold.factory.encoder.flush(device);
                     glyphs_light.factory.encoder.flush(device);
                 });
-                // NOTE: Method 1 is to use Into to convert Event into Input. Needs testing
-                // let test: Option<Input> = event.into();
-                // NOTE: Method 2 is to get text_args() from Event. Needs testing
-                // let test = event.text_args();
 
                 // Check for text input and pass to handler if present
                 if let Some(piston_window::Input::Text(text)) = event.clone().into() {
                     game.handle_text_input(text);
                 }
 
-                // Handle key binding logic
+                // Handle naming logic
+                if let Some(Button::Keyboard(key)) = event.press_args() {
+                    game.key_pressed(key);
+                }
+            }
+            GameState::Leaderboard => {
+                // Draw name entering screen
+                window.draw_2d(&event, |c, g, device| {
+                    clear(BACK_COLOR, g);
+                    game.draw_leaderboard(
+                        &c,
+                        g,
+                        &mut glyphs_bold,
+                        &mut glyphs_light,
+                        &mut glyphs_regular,
+                    );
+                    // Flush glyphs to the device
+                    glyphs_bold.factory.encoder.flush(device);
+                    glyphs_light.factory.encoder.flush(device);
+                    glyphs_regular.factory.encoder.flush(device);
+                });
+
+                // Handle leaderboard logic
                 if let Some(Button::Keyboard(key)) = event.press_args() {
                     game.key_pressed(key);
                 }
