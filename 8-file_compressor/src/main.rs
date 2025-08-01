@@ -1,46 +1,110 @@
-extern crate flate2;
+use anyhow::Result;
+use clap::{Args, Parser}; // NOTE: Use context() for more detailed error messages
 
-use flate2::Compression;
-use flate2::write::GzEncoder;
-// use flate2::write::ZlibEncoder;
+use std::path::PathBuf;
 
-use std::env::args; // NOTE: Replace with Clap?
-use std::fs::File;
-use std::io::BufReader;
-use std::io::copy;
-use std::time::Instant;
+#[derive(Parser)]
+#[command(
+    version,
+    about = "A CLI utility for archiving and extracting files. It archives by default but can also be used to extract archives.",
+    long_about = None
+)]
+struct Cli {
+    /// Extract provided input file(s)
+    #[arg(short = 'x', long)]
+    extract: bool,
 
-// TODO: Allow decoding with a -d flag
-// TODO: Allow user to choose between different encoders and decoders
+    /// Input file path(s)
+    #[arg(num_args = 1..)]
+    input: Vec<PathBuf>,
 
-fn main() {
-    // NOTE: Replace with Clap?
-    if args().len() != 3 {
-        eprintln!("Usage: file_compressor <input_file> <output_file>");
+    /// Output file path(s)
+    #[arg(short, long, num_args = 1..)]
+    output: Vec<PathBuf>,
+
+    /// Output directory
+    #[arg(short, long, num_args = 1, conflicts_with = "output")]
+    directory: Vec<PathBuf>,
+
+    #[command(flatten)]
+    schema: Option<Schema>,
+}
+
+#[derive(Args)]
+#[group(required = false, multiple = false)]
+struct Schema {
+    /// Use ZIP compression (Default)
+    #[arg(long)]
+    zip: bool,
+
+    /// Use BZIP2 compression
+    #[arg(long)]
+    bzip2: bool,
+
+    /// Use GZIP compression
+    #[arg(long)]
+    gzip: bool,
+}
+
+// Enum to store which output mode is active
+enum OutputMode {
+    Directory(PathBuf),
+    Files(Vec<PathBuf>),
+}
+
+fn main() -> Result<()> {
+    let cli = Cli::parse();
+
+    // Get input and output files
+    let input_files = cli.input;
+    let output = if !cli.directory.is_empty() {
+        let out = cli.directory[0].clone();
+        // Exit with error if the provided path is not a directory
+        if !out.is_dir() {
+            eprintln!("Error: Value of --directory must be a path to a directory.");
+            std::process::exit(1);
+        }
+        // Return output directory
+        OutputMode::Directory(out)
+    } else if !cli.output.is_empty() {
+        let out = cli.output.clone();
+        // Exit with error if the number of output files doesn't match the number of input files
+        if out.len() != input_files.len() {
+            eprintln!("Error: Number of output files must equal the number of input files.");
+            std::process::exit(1);
+        }
+        // Return output files
+        OutputMode::Files(cli.output.clone())
+    } else {
+        // Exit with error if neither output files nor output directory is specified
+        eprintln!("Error: Must specify output via --output or --directory");
+        std::process::exit(1);
+    };
+
+    match output {
+        OutputMode::Files(files) => {
+            // NOTE: Placeholder
+            println!("Output files: {files:?}");
+        }
+        OutputMode::Directory(dir) => {
+            // NOTE: Placeholder
+            println!("Output directory: {dir:?}");
+        }
     }
 
-    // Create input and output files
-    let mut input_file = BufReader::new(File::open(args().nth(1).unwrap()).unwrap());
-    let output_file = File::create(args().nth(2).unwrap()).unwrap();
-    // Create encoder
-    let mut encoder = GzEncoder::new(output_file, Compression::default());
-    // Start timer
-    let start = Instant::now();
+    // Calculate compression scheme
+    let _schema = if let Some(s) = cli.schema {
+        match s {
+            Schema {zip: true, ..} => "zip",
+            Schema {bzip2: true, ..} => "bzip2",
+            Schema {gzip: true, ..} => "gzip",
+            _ => "zip",
+        }
+    } else {
+        "zip"
+    };
 
-    // Encoding process
-    copy(&mut input_file, &mut encoder).unwrap();
-    let output_file = encoder.finish().unwrap();
-
-    // Print file data
-    println!(
-        "Source file size: {:?} bytes",
-        input_file.get_ref().metadata().unwrap().len()
-    );
-    println!(
-        "Compressed file size: {:?} bytes",
-        output_file.metadata().unwrap().len()
-    );
-    println!("Time elapsed: {:?}", start.elapsed());
-
-    // TODO: Decoding?
+    // Flag to determine extraction vs compression
+    let _extract = cli.extract;
+    Ok(())
 }

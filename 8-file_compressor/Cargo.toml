@@ -1,7 +1,13 @@
 [package]
-name = "file_compressor"
+name = "ezarc"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-flate2 = "1.1.1"
+anyhow = "1.0.98"
+clap_derive = "4.5.41"
+flate2 = "1.1.2"
+indicatif = "0.18.0"
+tar = "0.4.44"
+zip = "4.3.0"
+clap = { version = "4.5.42", features = ["derive"] }

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="EMPTY_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/1-hello_cargo/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/2-guessing_game/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/3-tic_tac_toe/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/4-tic_tac_toe_advanced/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/5-weather_app/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/6-grep_cli_tool/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/7-snake_game/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/8-file_compressor/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/9-web_server/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/1-hello_cargo/target" />
+      <excludeFolder url="file://$MODULE_DIR$/2-guessing_game/target" />
+      <excludeFolder url="file://$MODULE_DIR$/3-tic_tac_toe/target" />
+      <excludeFolder url="file://$MODULE_DIR$/4-tic_tac_toe_advanced/target" />
+      <excludeFolder url="file://$MODULE_DIR$/5-weather_app/target" />
+      <excludeFolder url="file://$MODULE_DIR$/6-grep_cli_tool/target" />
+      <excludeFolder url="file://$MODULE_DIR$/7-snake_game/target" />
+      <excludeFolder url="file://$MODULE_DIR$/8-file_compressor/target" />
+      <excludeFolder url="file://$MODULE_DIR$/9-web_server/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
