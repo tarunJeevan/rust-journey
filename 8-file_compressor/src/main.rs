@@ -3,11 +3,13 @@ use clap::{Args, Parser}; // NOTE: Use context() for more detailed error message
 
 use std::path::PathBuf;
 
+mod commands;
+
 #[derive(Parser)]
 #[command(
     version,
     about = "A CLI utility for archiving and extracting files. It archives by default but can also be used to extract archives.",
-    long_about = None
+    long_about = None,
 )]
 struct Cli {
     /// Extract provided input file(s)
@@ -55,8 +57,29 @@ enum OutputMode {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    // Get input and output files
-    let input_files = cli.input;
+    // Get flag to determine extraction or compression
+    let extract = cli.extract;
+
+    // Get and validate input files
+    let input_files = if extract {
+        // Ensure that all input file extensions are compressed formats
+        for file in &cli.input {
+            match file.extension() {
+                Some(ext) => if ["zip", "bz2", "gz"].contains(&ext.to_str().unwrap_or("")) {
+                    continue;
+                }
+                None => {
+                    eprintln!("Error: Invalid file path: {}", file.display());
+                    std::process::exit(1);
+                }
+            }
+        }
+        cli.input
+    } else {
+        cli.input
+    };
+    
+    // Get and validate output files
     let output = if !cli.directory.is_empty() {
         let out = cli.directory[0].clone();
         // Exit with error if the provided path is not a directory
@@ -81,17 +104,6 @@ fn main() -> Result<()> {
         std::process::exit(1);
     };
 
-    match output {
-        OutputMode::Files(files) => {
-            // NOTE: Placeholder
-            println!("Output files: {files:?}");
-        }
-        OutputMode::Directory(dir) => {
-            // NOTE: Placeholder
-            println!("Output directory: {dir:?}");
-        }
-    }
-
     // Calculate compression scheme
     let _schema = if let Some(s) = cli.schema {
         match s {
@@ -104,7 +116,16 @@ fn main() -> Result<()> {
         "zip"
     };
 
-    // Flag to determine extraction vs compression
-    let _extract = cli.extract;
+    match output {
+        OutputMode::Files(files) => {
+            // NOTE: Placeholder
+            println!("Output files: {files:?}");
+        }
+        OutputMode::Directory(dir) => {
+            // NOTE: Placeholder
+            println!("Output directory: {dir:?}");
+        }
+    }
+    
     Ok(())
 }

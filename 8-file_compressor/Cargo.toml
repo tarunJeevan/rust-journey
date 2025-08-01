@@ -3,6 +3,10 @@ name = "ezarc"
 version = "0.1.0"
 edition = "2024"
 
+[dev-dependencies]
+snapbox = { version = "0.6.21", features = ["cmd"] }
+trycmd = "0.15.10"
+
 [dependencies]
 anyhow = "1.0.98"
 clap_derive = "4.5.41"

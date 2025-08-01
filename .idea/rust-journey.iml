@@ -11,6 +11,7 @@
       <sourceFolder url="file://$MODULE_DIR$/7-snake_game/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/8-file_compressor/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/9-web_server/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/8-file_compressor/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/1-hello_cargo/target" />
       <excludeFolder url="file://$MODULE_DIR$/2-guessing_game/target" />
       <excludeFolder url="file://$MODULE_DIR$/3-tic_tac_toe/target" />

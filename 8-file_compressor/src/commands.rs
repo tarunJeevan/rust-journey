@@ -1,5 +1,5 @@
-mod compress.rs;
-mod extract.rs;
+mod compress;
+mod extract;
 
 pub use compress::*;
 pub use extract::*;
