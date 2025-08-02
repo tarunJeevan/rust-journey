@@ -65,8 +65,10 @@ fn main() -> Result<()> {
         // Ensure that all input file extensions are compressed formats
         for file in &cli.input {
             match file.extension() {
-                Some(ext) => if ["zip", "bz2", "gz"].contains(&ext.to_str().unwrap_or("")) {
-                    continue;
+                Some(ext) => {
+                    if ["zip", "bz2", "gz"].contains(&ext.to_str().unwrap_or("")) {
+                        continue;
+                    }
                 }
                 None => {
                     eprintln!("Error: Invalid file path: {}", file.display());
@@ -78,15 +80,16 @@ fn main() -> Result<()> {
     } else {
         cli.input
     };
-    
+
     // Get and validate output files
     let output = if !cli.directory.is_empty() {
         let out = cli.directory[0].clone();
         // Exit with error if the provided path is not a directory
         if !out.is_dir() {
-            eprintln!("Error: Value of --directory must be a path to a directory.");
+            eprintln!("Error: Value of --directory must be a valid path to a directory.");
             std::process::exit(1);
         }
+        // TODO: Instead of erroring out, create a new directory if the provided one doesn't exist
         // Return output directory
         OutputMode::Directory(out)
     } else if !cli.output.is_empty() {
@@ -107,9 +110,9 @@ fn main() -> Result<()> {
     // Calculate compression scheme
     let _schema = if let Some(s) = cli.schema {
         match s {
-            Schema {zip: true, ..} => "zip",
-            Schema {bzip2: true, ..} => "bzip2",
-            Schema {gzip: true, ..} => "gzip",
+            Schema { zip: true, .. } => "zip",
+            Schema { bzip2: true, .. } => "bzip2",
+            Schema { gzip: true, .. } => "gzip",
             _ => "zip",
         }
     } else {
@@ -126,6 +129,6 @@ fn main() -> Result<()> {
             println!("Output directory: {dir:?}");
         }
     }
-    
+
     Ok(())
 }

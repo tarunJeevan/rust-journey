@@ -43,12 +43,12 @@ file_compressor/
 - [x] Add necessary dependencies: `clap` and `anyhow`
 - [x] Create a modular project structure to support the `extract` and `compress` commands as well as any future commands
 - [x] Define CLI structure with subcommands:
-    - `compress` - Archive and compress files
-    - `extract` - Extract files from archives
-- [x] Support basic flags:
-    - `-o/--output` to indicate output file (Should be optional)
-    - `-d/--directory` to indicate output directory
-    - `-x/--extract` to indicate decompression
+    - [x] `compress` - Archive and compress files
+    - [x] `extract` - Extract files from archives
+- [ ] Support basic flags:
+    - [x] `-o/--output` to indicate output file location
+    - [ ] `-d/--directory` to indicate input and/or output directory
+    - [x] `-x/--extract` to indicate decompression
 - [x] Add basic logging and error handling via `anyhow`
 
 ## **Phase 2: Basic Archival and Extraction with ZIP**
@@ -57,13 +57,16 @@ file_compressor/
 **Tasks**:
 
 - [x] Add `zip` crate
-- [ ] Implement compression with the `--zip` flag:
-    - [ ] Single input file into single output `.zip` file
-    - [ ] Multiple input files into multiple output `.zip` files
+- [x] Implement compression with the `--zip` flag:
+    - [x] Single input file into single output `.zip` file
+    - [x] Multiple input files into multiple output `.zip` files
+    - [ ] Archive a specified directory with the `-d` flag
+    - [x] Archive _**to**_ a specified directory with the `-d` flag
 - [ ] Implement extraction:
     - [ ] Single input `.zip` file into single output file
     - [ ] Multiple input `.zip` files into multiple output files
-    - [ ] Extract to a specified directory with the `-d` flag
+    - [ ] Extract a specified directory with the `-d` flag
+    - [ ] Extract _**to**_ a specified directory with the `-d` flag
 - [ ] Add test cases (**_Note_**: Consider using crates like `trycmd` and `snapbox`)
 - [ ] Handle overwrite checks, file errors, etc
 
@@ -72,14 +75,17 @@ file_compressor/
 
 **Tasks**:
 
-- [x] Add `bzip2` and `flate2` crates
+- [x] Add `flate2` crate
 - [ ] Implement compression with the `--bzip2` and `--gzip` flags:
     - [ ] Single input file into single output `.bz2` or `.gz` file
     - [ ] Multiple input files into multiple output `.bz2` or `.gz` files
+    - [ ] Archive a specified directory with the `-d` flag
+    - [ ] Archive _**to**_ a specified directory with the `-d` flag
 - [ ] Implement extraction:
     - [ ] Single input `.bz2` or `.gz` file into single output file
     - [ ] Multiple input `.bz2` or `.gz` files into multiple output files
-    - [ ] Extract to a specified directory with the `-d` flag
+    - [ ] Extract a specified directory with the `-d` flag
+    - [ ] Extract _**to**_ a specified directory with the `-d` flag
 - [ ] Add test cases (**_Note_**: Consider using crates like `trycmd` and `snapbox`)
 - [ ] Handle overwrite checks, file errors, etc
 
@@ -92,10 +98,13 @@ file_compressor/
 - [ ] Implement compression with the `--tar`, `--tar-bzip2`, and `--tar-gzip` flags:
     - [ ] Single input file into single output `.tar`, `.tar.bz2` or `.tar.gz` file
     - [ ] Multiple input files into multiple output `.tar`, `.tar.bz2` or `.tar.gz` files
+    - [ ] Archive a specified directory with the `-d` flag
+    - [ ] Archive _**to**_ a specified directory with the `-d` flag
 - [ ] Implement extraction:
     - [ ] Single input `.tar`, `.tar.bz2` or `.tar.gz` file into single output file
     - [ ] Multiple input `.tar`, `.tar.bz2` or `.tar.gz` files into multiple output files
-    - [ ] Extract to a specified directory with the `-d` flag
+    - [ ] Extract a specified directory with the `-d` flag
+    - [ ] Extract _**to**_ a specified directory with the `-d` flag
 - [ ] Add test cases (**_Note_**: Consider using crates like `trycmd` and `snapbox`)
 - [ ] Handle overwrite checks, file errors, etc
 
@@ -108,10 +117,13 @@ file_compressor/
 - [ ] Implement compression with the `--tar-zst` and `--tar-xz2` flags:
     - [ ] Single input file into single output `.tar.zst` or `.tar.xz` file
     - [ ] Multiple input files into multiple output `.tar.zst` or `.tar.xz` files
+    - [ ] Archive a specified directory with the `-d` flag
+    - [ ] Archive _**to**_ a specified directory with the `-d` flag
 - [ ] Implement extraction:
     - [ ] Single input `.tar.zst` or `.tar.xz` file into single output file
     - [ ] Multiple input `.tar.zst` or `.tar.xz` files into multiple output files
-    - [ ] Extract to a specified directory with the `-d` flag
+    - [ ] Extract a specified directory with the `-d` flag
+    - [ ] Extract _**to**_ a specified directory with the `-d` flag
 - [ ] Add test cases (**_Note_**: Consider using crates like `trycmd` and `snapbox`)
 - [ ] Handle overwrite checks, file errors, etc
 
