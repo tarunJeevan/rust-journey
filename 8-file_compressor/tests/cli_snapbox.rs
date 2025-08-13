@@ -1,9 +1,3 @@
-mod compress_tests;
-mod extract_tests;
-
-use compress_tests::*;
-use extract_tests::*;
-
 use snapbox::cmd::{Command, cargo_bin};
 
 #[test]
