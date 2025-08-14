@@ -3,7 +3,7 @@ use std::io::{BufWriter, copy};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
-use walkdir::{DirEntry, WalkDir};
+use walkdir::WalkDir;
 use zip::{ZipWriter, write::SimpleFileOptions};
 
 /// Compresses a single input file into a zip archive at the specified output path
@@ -11,11 +11,7 @@ use zip::{ZipWriter, write::SimpleFileOptions};
 /// `input_file` is the Path of the archive target. `output_zip` is the Path of the resulting archive. `permissions` is the unix file permissions
 ///
 /// Returns `()` on success and an error with context on Error
-fn compress_single_file_to_zip(
-    input_file: &Path,
-    output_zip: &Path,
-    permissions: u32,
-) -> Result<()> {
+pub fn compress_single_file_to_zip(input_file: &Path, output_zip: &Path) -> Result<()> {
     let input_name = input_file
         .file_name()
         .context("Missing input file name")?
@@ -36,7 +32,7 @@ fn compress_single_file_to_zip(
     // Define file options
     let options = SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Stored)
-        .unix_permissions(permissions);
+        .unix_permissions(0o644);
 
     // Prep archive for writing
     zip.start_file(input_name.as_ref(), options)
@@ -51,20 +47,7 @@ fn compress_single_file_to_zip(
     Ok(())
 }
 
-/// Compresses each input file into a zip archive at the specified output path, with a 1-to-1 mapping between input and output files
-///
-/// `input_files` is the list of file paths to archive. `output_files` is the list of Paths for the resulting archives
-///
-/// Returns `()` on success and an error with context on Error
-pub fn compress_files_to_zip(input_files: &[PathBuf], output_files: &[PathBuf]) -> Result<()> {
-    for (input, output) in input_files.iter().zip(output_files.iter()) {
-        compress_single_file_to_zip(input, output, 0o644)?;
-    }
-
-    Ok(())
-}
-
-/// Compresses the contents of an entire directory into a zip archive
+/// Recursively compresses the contents of an entire directory into a zip archive
 ///
 /// `in_dir` is the input directory Path and `out_dir` is the output archive Path
 ///
@@ -84,7 +67,7 @@ pub fn compress_directory_to_zip_directory(in_dir: &Path, out_dir: &Path) -> Res
         .context("Error: Failed to canonicalize base input path.")?;
 
     for entry in WalkDir::new(in_dir) {
-        let entry: DirEntry = entry?;
+        let entry = entry?;
         let path = entry.path();
 
         // Skip the root directory
@@ -153,35 +136,35 @@ pub fn compress_files_to_zip_directory(input_files: &[PathBuf], out_dir: &Path) 
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
     use super::*;
-    use std::io::Write;
-    use zip::ZipArchive;
     use anyhow::Result;
+    use std::fs;
+    use std::io::Write;
     use tempfile::tempdir;
+    use zip::ZipArchive;
 
     /// Helper function to create a temp file to compress
-    /// 
+    ///
     /// `dir` is the directory where the file is to be created. `name` is the file name. `contents` is the file contents
-    /// 
+    ///
     /// Returns a PathBuf containing the path to the created file
     fn create_temp_file(dir: &Path, name: &str, contents: &str) -> PathBuf {
         let file_path = dir.join(name);
         let mut file = File::create(&file_path).unwrap();
-        
+
         writeln!(file, "{contents}").unwrap();
         file_path
     }
-    
+
     /// Helper function to get all the file names in a directory
-    /// 
+    ///
     /// `zip_path` is the directory to go through
-    /// 
+    ///
     /// Returns a vector containing the file names
     fn extract_zip_file_names(zip_path: &Path) -> Vec<String> {
         let dir = File::open(zip_path).unwrap();
         let mut archive = ZipArchive::new(dir).unwrap();
-        
+
         let mut names = vec![];
         for i in 0..archive.len() {
             let file = archive.by_index(i).unwrap();
@@ -191,10 +174,36 @@ mod tests {
     }
 
     #[test]
-    fn test_single_file_compression() {}
+    fn test_single_file_compression() -> Result<()> {
+        // Create temp directory
+        let temp_dir = tempdir()?;
+        let input_dir = temp_dir.path();
 
-    #[test]
-    fn test_multi_file_compression() {}
+        // Create dummy input file
+        let input_1 = create_temp_file(input_dir, "file1.txt", "Hello world!");
+
+        // Create output directory and compress input files into it
+        let output_path = match input_1.parent() {
+            Some(parent) => {
+                let stem = input_1.file_stem().unwrap().to_str().unwrap_or("");
+                let out_name = format!("{stem}.zip");
+                PathBuf::from(parent).join(Path::new(&out_name))
+            }
+            None => {
+                let name = format!(
+                    "{}.zip",
+                    input_1.file_stem().unwrap().to_str().unwrap_or("")
+                );
+                PathBuf::from(name)
+            }
+        };
+        compress_single_file_to_zip(&input_1, &output_path)?;
+
+        // Confirm that the output file was created
+        assert!(output_path.exists());
+
+        Ok(())
+    }
 
     #[test]
     fn test_multi_file_to_archive_compression() -> Result<()> {
@@ -227,20 +236,20 @@ mod tests {
         let input_dir = temp_dir.path().join("input");
         let sub_dir = input_dir.join("sub");
         fs::create_dir_all(&sub_dir)?;
-        
+
         // Create dummy input files
         create_temp_file(&input_dir, "file1.txt", "Hello world!");
         create_temp_file(&sub_dir, "file2.log", "I will be back...");
         let output_zip = temp_dir.path().join("output.zip");
         compress_directory_to_zip_directory(&input_dir, &output_zip)?;
-        
+
         // Confirm that the output folder was directed
         assert!(output_zip.exists());
-        
+
         // Confirm archive contents match what is expected
         let zip_contents = extract_zip_file_names(&output_zip);
         assert_eq!(zip_contents, vec!["file1.txt", "sub/", "sub/file2.log"]);
-        
+
         Ok(())
     }
 }

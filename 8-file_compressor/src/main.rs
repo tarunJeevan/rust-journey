@@ -1,12 +1,13 @@
 use anyhow::Result;
 use clap::{Args, Parser};
-use std::fs::DirBuilder; // NOTE: Use context() for more detailed error messages
 
 use std::path::PathBuf;
+use walkdir::WalkDir;
+use crate::commands::{compress_directory_to_zip_directory, compress_files_to_zip_directory, compress_single_file_to_zip};
 
 mod commands;
 
-const SUPPORTED_ARCHIVE_FORMATS: &[&str] = &["tar.gz", "tar.xz", "zip", "bz2", "gz"];
+const SUPPORTED_ARCHIVE_FORMATS: &[&str] = &["tar.gz", "tar.xz", "zip", "zip64", "bz2", "gz", "xz"];
 
 #[derive(Parser)]
 #[command(
@@ -19,17 +20,13 @@ struct Cli {
     #[arg(short = 'x', long)]
     extract: bool,
 
+    /// Output archive path
+    #[arg(num_args = 1)]
+    output: PathBuf,
+
     /// Input file path(s)
     #[arg(num_args = 1..)]
     input: Vec<PathBuf>,
-
-    /// Output file path(s)
-    #[arg(short, long, num_args = 1..)]
-    output: Vec<PathBuf>,
-
-    /// Allow directory as input/output
-    #[arg(short, long, num_args = 1)]
-    directory: bool,
 
     #[command(flatten)]
     schema: Option<Schema>,
@@ -51,12 +48,6 @@ struct Schema {
     gzip: bool,
 }
 
-// Enum to store which output mode is active
-enum OutputMode {
-    Directory(PathBuf),
-    Files(Vec<PathBuf>),
-}
-
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
@@ -64,10 +55,7 @@ fn main() -> Result<()> {
     let _extract = cli.extract;
 
     // Get and validate input files
-    let input_files = get_input_files(cli.input, cli.extract, cli.directory);
-
-    // Get and validate output files
-    let output = get_output_files(&input_files, cli.output, cli.directory);
+    let input_files = validate_input_files(cli.input, cli.extract);
 
     // Calculate compression scheme
     let _schema = if let Some(s) = cli.schema {
@@ -80,131 +68,69 @@ fn main() -> Result<()> {
     } else {
         "zip"
     };
+    
+    // TODO: Remove placeholder
+    // println!("Input files: {input_files:?}");
 
-    match output {
-        OutputMode::Files(files) => {
-            // NOTE: Placeholder
-            println!("Output files: {files:?}");
+    // NOTE: Rework as needed
+    if input_files.len() == 1 {
+        if input_files[0].is_dir() {
+            compress_directory_to_zip_directory(input_files[0].as_path(), cli.output.as_path())?;
+        } else {
+            compress_single_file_to_zip(input_files[0].as_path(), cli.output.as_path())?;
         }
-        OutputMode::Directory(dir) => {
-            // NOTE: Placeholder
-            println!("Output directory: {dir:?}");
-        }
+    } else {
+        compress_files_to_zip_directory(&input_files, cli.output.as_path())?;
     }
-
+    
     Ok(())
 }
 
-fn get_input_files(input: Vec<PathBuf>, extract: bool, directory: bool) -> Vec<PathBuf> {
-    let mut input_files: Vec<PathBuf> = Vec::new();
-    // If `directory` is true, check if the input is a valid directory
-    if directory {
-        if input.len() == 1 {
-            if !input[0].is_dir() {
-                eprintln!("Error: Input must be a valid directory.");
-                std::process::exit(1);
-            }
-            // Walk through the directory and add all files found to input_files
-            if let Ok(entries) = input[0].read_dir() {
-                for entry in entries {
-                    if let Ok(entry) = entry {
-                        input_files.push(entry.path());
-                    } else {
-                        eprintln!("Error: Encountered an IO error reading file: {entry:?}.");
-                        continue;
-                    }
-                }
-            }
-        } else {
-            input_files.extend(input);
-        }
-    } else {
-        // Exit with error if the user passes in a directory without the `-d` flag
-        if input.len() == 1 && input[0].is_dir() {
-            eprintln!(
-                "Error: Invalid input. To pass a directory as input, use the '-d' flag. Use '--help' for more info."
-            );
-            std::process::exit(1);
-        }
-        // Add files from input into input_files
-        input_files.extend(input);
+fn validate_input_files(input: Vec<PathBuf>, extract: bool) -> Vec<PathBuf> {
+    // Ensure the input isn't empty
+    if input.is_empty() {
+        eprintln!("Error: No input files specified. Use --help for more information.");
+        std::process::exit(1);
     }
-
-    // If `extract` is true, check file extensions to make sure that all files are archives
-    if extract {
-        for file in &input_files {
-            if file.is_dir() {
-                // Walk through the directory and add all files found to input_files
-                if let Ok(entries) = input_files[0].read_dir() {
-                    for entry in entries {
-                        if let Ok(entry) = entry {
-                            if let Some(ext) = entry.path().extension() {
-                                if SUPPORTED_ARCHIVE_FORMATS.contains(&ext.to_str().unwrap_or("")) {
-                                    continue;
-                                }
-                            } else {
-                                eprintln!("Error: Invalid file path: {}", file.display());
-                                std::process::exit(1);
-                            }
-                        } else {
-                            eprintln!("Error: Encountered an IO error reading file: {entry:?}.");
-                            continue;
-                        }
-                    }
+    
+    // Validate that all input files are valid
+    for file in &input {
+        // Create a recursive directory iterator using WalkDir
+        for entry in WalkDir::new(file) {
+            if let Ok(entry) = entry {
+                if !entry.path().exists() {
+                    eprintln!("{:?} is not a valid file", entry.path());
+                    std::process::exit(1);
                 }
             } else {
-                match file.extension() {
-                    Some(ext) => {
+                eprintln!("Error: Encountered an error reading file: {}", file.display());
+                std::process::exit(1);
+            }
+        }
+    }
+    
+    // If extraction is enabled, validate input files to ensure that they are archives
+    if extract {
+        for file in &input {
+            // Create a recursive directory iterator using WalkDir
+            for entry in WalkDir::new(file) {
+                if let Ok(entry) = entry {
+                    // Check file extension to ensure it's an archive format
+                    if let Some(ext) = entry.path().extension() {
                         if SUPPORTED_ARCHIVE_FORMATS.contains(&ext.to_str().unwrap_or("")) {
                             continue;
                         }
-                    }
-                    None => {
-                        eprintln!("Error: Invalid file path: {}", file.display());
+                    } else {
+                        eprintln!("Error: File must be an archive of a supported format: {}", file.display());
                         std::process::exit(1);
                     }
-                }
-            }
-        }
-        input_files
-    } else {
-        input_files
-    }
-}
-
-fn get_output_files(input: &[PathBuf], output: Vec<PathBuf>, directory: bool) -> OutputMode {
-    // NOTE: The `directory` flag might have been to extract an input directory into individual output files
-    if directory {
-        if output.len() == 1 {
-            let out = output[0].clone();
-            // If the provided path is not a valid directory, try to create one there
-            if !out.is_dir() {
-                if let Err(error) = DirBuilder::new().recursive(true).create(&out) {
-                    eprintln!(
-                        "Error: Failed to create the specified output directory with error: {error}"
-                    );
+                } else {
+                    eprintln!("Error: Encountered an error reading file: {}", file.display());
                     std::process::exit(1);
                 }
             }
-            // Return output directory
-            OutputMode::Directory(out)
-        } else {
-            // Exit with error if the number of input files don't equal the number of output files
-            if output.len() != input.len() {
-                eprintln!("Error: Expected a single output directory.");
-                std::process::exit(1);
-            }
-            // Return output files
-            OutputMode::Files(output)
         }
-    } else {
-        let out = output.clone();
-        // Exit with error if the number of output files doesn't match the number of input files
-        if out.len() != input.len() {
-            eprintln!("Error: Number of output files must equal the number of input files.");
-            std::process::exit(1);
-        }
-        // Return output files
-        OutputMode::Files(out)
     }
+    // Return input files if all checks pass
+    input
 }

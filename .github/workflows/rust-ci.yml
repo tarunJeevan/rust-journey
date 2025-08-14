@@ -1,0 +1,39 @@
+# GitHub Action workflow
+name: Rust CI - 8-file_compressor
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '8-file_compressor/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '8-file_compressor/**'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 8-file_compressor
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: clippy
+      - name: Cache Cargo Registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('8-file_compressor/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      - name: Run Tests
+        run: cargo test --verbose
