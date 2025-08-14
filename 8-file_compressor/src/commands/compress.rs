@@ -54,7 +54,7 @@ pub fn compress_single_file_to_zip(input_file: &Path, output_zip: &Path) -> Resu
 /// Returns `()` on success and an error with context on Error
 pub fn compress_directory_to_zip_directory(in_dir: &Path, out_dir: &Path) -> Result<()> {
     let zip_file = File::create(out_dir)
-        .with_context(|| format!("Failed to create zip archive: {:?}", out_dir.display()))?;
+        .with_context(|| format!("Error: Failed to create zip archive: {:?}", out_dir.display()))?;
     let writer = BufWriter::new(zip_file);
     let mut zip = ZipWriter::new(writer);
 
