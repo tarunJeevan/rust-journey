@@ -137,9 +137,11 @@ pub fn compress_files_to_zip_directory(input_files: &[PathBuf], out_dir: &Path) 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::Result;
+    
     use std::fs;
     use std::io::Write;
+    
+    use anyhow::Result;
     use tempfile::tempdir;
     use zip::ZipArchive;
 
