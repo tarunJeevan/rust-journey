@@ -70,18 +70,28 @@ fn main() -> Result<()> {
     };
     
     // TODO: Remove placeholder
-    // println!("Input files: {input_files:?}");
+    println!("Input files: {input_files:?}");
 
     // NOTE: Rework as needed
-    if input_files.len() == 1 {
-        if input_files[0].is_dir() {
-            compress_directory_to_zip_directory(input_files[0].as_path(), cli.output.as_path())?;
-        } else {
-            compress_single_file_to_zip(input_files[0].as_path(), cli.output.as_path())?;
-        }
-    } else {
-        compress_files_to_zip_directory(&input_files, cli.output.as_path())?;
-    }
+    // if input_files.len() == 1 {
+    //     if input_files[0].is_dir() {
+    //         compress_directory_to_zip_directory(input_files[0].as_path(), cli.output.as_path())?;
+    //     } else {
+    //         compress_single_file_to_zip(input_files[0].as_path(), cli.output.as_path())?;
+    //     }
+    // } else {
+    //     compress_files_to_zip_directory(&input_files, cli.output.as_path())?;
+    // }
+    
+    // OR
+    
+    // for file in input_files {
+    //     if file.is_dir() {
+    //         compress_directory_to_zip_directory(file.as_path(), cli.output.as_path())?;
+    //     } else if file.is_file() {
+    //         compress_single_file_to_zip(file.as_path(), cli.output.as_path())?;
+    //     }
+    // }
     
     Ok(())
 }

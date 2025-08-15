@@ -109,7 +109,7 @@ pub fn compress_files_to_zip_directory(input_files: &[PathBuf], out_dir: &Path) 
         .with_context(|| format!("Error: Failed to create zip file: {}", out_dir.display()))?;
     let writer = BufWriter::new(zip_file);
     let mut zip = ZipWriter::new(writer);
-
+    
     let options = SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated)
         .unix_permissions(0o644);
@@ -119,13 +119,13 @@ pub fn compress_files_to_zip_directory(input_files: &[PathBuf], out_dir: &Path) 
             .file_name()
             .context("Missing input file name.")?
             .to_string_lossy();
-
+        
         zip.start_file(input_name.as_ref(), options)
             .with_context(|| format!("Error: Failed to start file entry for {input_file:?}"))?;
-
+        
         let mut input = File::open(input_file)
             .with_context(|| format!("Error: Failed to open input file: {input_file:?}"))?;
-
+        
         copy(&mut input, &mut zip)
             .with_context(|| format!("Error: Failed to copy file into archive: {input_file:?}"))?;
     }
