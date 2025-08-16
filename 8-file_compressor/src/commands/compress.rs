@@ -1,10 +1,92 @@
-use std::fs::File;
+use std::fs::{File, OpenOptions, create_dir_all};
 use std::io::{BufWriter, copy};
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use walkdir::WalkDir;
 use zip::{ZipWriter, write::SimpleFileOptions};
+
+/// Compresses all files/directories in `input_path` into `out_dir`, preserving existing file structure
+/// 
+/// `input_path` is the file/directory to be compressed. `out_dir` is the output location
+/// 
+/// Returns `()` on success and an error with context on Error
+pub fn compress_to_zip(input_path: &Path, out_zip: &Path) -> Result<()>  {
+    // Ensure parent directory for output zip path exists
+    if let Some(parent) = out_zip.parent() {
+        create_dir_all(parent)
+            .with_context(|| format!("Failed to create parent directory: {}", parent.display()))?;
+    }
+    
+    // Open existing zip or create new one otherwise
+    let file = if out_zip.exists() {
+        OpenOptions::new()
+            .read(true)
+            .append(true)
+            .open(out_zip)
+            .with_context(|| format!("Failed to open existing zip file: {}", out_zip.display()))?
+    } else {
+        File::create(out_zip)
+            .with_context(|| format!("Failed to create new zip file: {}", out_zip.display()))?
+    };
+    
+    // Create ZipWriter in append or create mode depending on if out_zip exists
+    let mut writer = if out_zip.exists() {
+        ZipWriter::new_append(file)
+            .with_context(|| format!("Failed to open zip archive for append: {}", out_zip.display()))?
+    } else {
+        ZipWriter::new(file)
+    };
+    
+    // Create zip file options
+    let options = SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .unix_permissions(0o755);
+    
+    // File compression logic
+    if input_path.is_file() {
+        // Add the single file to the archive
+        let file_name = input_path
+            .file_name()
+            .context("Failed to get input file name")?
+            .to_string_lossy();
+        
+        writer.start_file(file_name.as_ref(), options)?;
+        let mut input_file = File::open(input_path)?;
+        copy(&mut input_file, &mut writer)?;
+    } else if input_path.is_dir() {
+        let base = input_path.canonicalize()
+            .context("Failed to canonicalize base directory of input file")?;
+        
+        for entry in WalkDir::new(&base) {
+            let entry = entry?;
+            let path = entry.path();
+            let rel_path = path.strip_prefix(&base)
+                .context("Failed to compute relative path from base directory")?;
+            
+            // Skip the root directory
+            if rel_path.as_os_str().is_empty() {
+                continue;
+            }
+            
+            if path.is_file() {
+                writer.start_file(rel_path.to_string_lossy(), options)?;
+                let mut input_file = File::open(path)?;
+                copy(&mut input_file, &mut writer)?;
+            } else if path.is_dir() {
+                let dir_name = format!("{}/", rel_path.to_string_lossy());
+                writer.add_directory(dir_name, options)?;
+            }
+        }
+    } else {
+        bail!("Input is neither file nor directory: {}", input_path.display());
+    }
+    
+    writer.finish()
+        .context("Failed to finalize zip archive")?;
+    
+    Ok(())
+}
 
 /// Compresses a single input file into a zip archive at the specified output path
 ///
