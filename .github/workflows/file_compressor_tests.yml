@@ -1,0 +1,32 @@
+name: File Compressor Tests
+
+on:
+  push:
+    branches: [main]
+    paths: 
+      - '8-file_compressor/**'
+      - '.github/workflows/file_compressor_tests.yml'
+
+  pull_request:
+    branches: [main]
+    paths:
+      - '8-file_compressor/**'
+      - '.github/workflows/file_compressor_tests.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    defaults: 
+      run: 
+        working-directory: 8-file_compressor
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        
+      - name: Run cargo test
+        run: cargo test --verbose
