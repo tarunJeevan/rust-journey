@@ -6,6 +6,12 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use zip::ZipArchive;
 
+/// Extracts an archive into a provided output directory
+/// 
+/// `zip_path` is the archive to extract. `out_dir` is the output directory which need not exist
+/// 
+/// Returns `()` on success and an error with context on Error
+#[allow(dead_code)]
 pub fn extract_zip(zip_path: &Path, out_dir: &Path) -> Result<()> {
     // Create archive reader
     let file = File::open(zip_path)
@@ -14,7 +20,7 @@ pub fn extract_zip(zip_path: &Path, out_dir: &Path) -> Result<()> {
         .with_context(|| format!("Failed to read zip file: {}", zip_path.display()))?;
     
     // Create output directory
-    fs::create_dir_all(&out_dir)
+    fs::create_dir_all(out_dir)
         .with_context(|| format!("Failed to create output directory: {}", out_dir.display()))?;
     
     // Iterate through archive reader and extract its contents

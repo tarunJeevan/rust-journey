@@ -11,6 +11,7 @@ use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 /// `path` is the file to open
 ///
 /// Returns a writer for the file on Ok and an error with context on Err 
+#[allow(dead_code)]
 fn open_zip_for_write(path: &Path) -> Result<ZipWriter<File>> {
     if path.exists() {
         // Try to validate archive
@@ -45,6 +46,7 @@ fn open_zip_for_write(path: &Path) -> Result<ZipWriter<File>> {
 /// `input_path` is the file/directory to be compressed. `out_dir` is the output location
 ///
 /// Returns `()` on success and an error with context on Error
+#[allow(dead_code)]
 pub fn compress_to_zip(input_path: &Path, out_zip: &Path) -> Result<()> {
     // Ensure parent directory for output zip path exists
     if let Some(parent) = out_zip.parent() {
