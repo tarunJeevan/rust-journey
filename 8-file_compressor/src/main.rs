@@ -3,7 +3,7 @@ use clap::{Args, Parser};
 
 use std::path::PathBuf;
 use walkdir::WalkDir;
-use crate::commands::{compress_directory_to_zip_directory, compress_files_to_zip_directory, compress_single_file_to_zip};
+// use crate::commands::{compress_to_zip, extract_zip};
 
 mod commands;
 
@@ -51,11 +51,8 @@ struct Schema {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    // Get flag to determine extraction or compression
-    let _extract = cli.extract;
-
     // Get and validate input files
-    let input_files = validate_input_files(cli.input, cli.extract);
+    let _input_files = validate_input_files(cli.input, cli.extract);
 
     // Calculate compression scheme
     let _schema = if let Some(s) = cli.schema {
@@ -68,31 +65,18 @@ fn main() -> Result<()> {
     } else {
         "zip"
     };
-    
-    // TODO: Remove placeholder
-    println!("Input files: {input_files:?}");
 
-    // NOTE: Rework as needed
-    // if input_files.len() == 1 {
-    //     if input_files[0].is_dir() {
-    //         compress_directory_to_zip_directory(input_files[0].as_path(), cli.output.as_path())?;
-    //     } else {
-    //         compress_single_file_to_zip(input_files[0].as_path(), cli.output.as_path())?;
-    //     }
+    // TODO: Remove placeholder
+    // println!("Input files: {input_files:?}");
+
+    // if cli.extract {
+    //     println!("Extracting files. Input: {input_files:?}. Output: {:?}.", cli.output);
     // } else {
-    //     compress_files_to_zip_directory(&input_files, cli.output.as_path())?;
-    // }
-    
-    // OR
-    
-    // for file in input_files {
-    //     if file.is_dir() {
-    //         compress_directory_to_zip_directory(file.as_path(), cli.output.as_path())?;
-    //     } else if file.is_file() {
-    //         compress_single_file_to_zip(file.as_path(), cli.output.as_path())?;
+    //     for file in &input_files {
+    //         compress_to_zip(file, &cli.output)?;
     //     }
     // }
-    
+
     Ok(())
 }
 
@@ -102,7 +86,7 @@ fn validate_input_files(input: Vec<PathBuf>, extract: bool) -> Vec<PathBuf> {
         eprintln!("Error: No input files specified. Use --help for more information.");
         std::process::exit(1);
     }
-    
+
     // Validate that all input files are valid
     for file in &input {
         // Create a recursive directory iterator using WalkDir
@@ -113,12 +97,15 @@ fn validate_input_files(input: Vec<PathBuf>, extract: bool) -> Vec<PathBuf> {
                     std::process::exit(1);
                 }
             } else {
-                eprintln!("Error: Encountered an error reading file: {}", file.display());
+                eprintln!(
+                    "Error: Encountered an error reading file: {}",
+                    file.display()
+                );
                 std::process::exit(1);
             }
         }
     }
-    
+
     // If extraction is enabled, validate input files to ensure that they are archives
     if extract {
         for file in &input {
@@ -131,11 +118,17 @@ fn validate_input_files(input: Vec<PathBuf>, extract: bool) -> Vec<PathBuf> {
                             continue;
                         }
                     } else {
-                        eprintln!("Error: File must be an archive of a supported format: {}", file.display());
+                        eprintln!(
+                            "Error: File must be an archive of a supported format: {}",
+                            file.display()
+                        );
                         std::process::exit(1);
                     }
                 } else {
-                    eprintln!("Error: Encountered an error reading file: {}", file.display());
+                    eprintln!(
+                        "Error: Encountered an error reading file: {}",
+                        file.display()
+                    );
                     std::process::exit(1);
                 }
             }
