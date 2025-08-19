@@ -29,7 +29,7 @@ fn success_with_multiple_files() -> Result<()> {
     let input_2 = create_temp_file(input_dir, "test_input_2.txt", "World!");
 
     Command::new(cargo_bin!("ezarc"))
-        .arg("out")
+        .arg("test_out")
         .args([
             input_1.canonicalize()?.display().to_string(),
             input_2.canonicalize()?.display().to_string(),
@@ -47,7 +47,7 @@ fn success_with_input_directories() -> Result<()> {
     let tmp_dir_2 = TempDir::with_prefix("test_input_dir_2")?;
     
     Command::new(cargo_bin!("ezarc"))
-        .arg("out")
+        .arg("test_out")
         .args([tmp_dir_1.path().canonicalize()?.display().to_string(), tmp_dir_2.path().canonicalize()?.display().to_string()])
         .assert()
         .success();
@@ -65,7 +65,7 @@ fn success_with_multiple_args() -> Result<()> {
     let input_1 = create_temp_file(input_dir, "test_input_1.txt", "Hello!");
     
     Command::new(cargo_bin!("ezarc"))
-        .arg("out")
+        .arg("test_out")
         .args([input_1.canonicalize()?.display().to_string(), tmp_dir_1.path().canonicalize()?.display().to_string()])
         .assert()
         .success();
@@ -77,7 +77,7 @@ fn success_with_multiple_args() -> Result<()> {
 /// Tests that the program fails when provided invalid input arguments, such as non-existent files or directories
 fn failure_with_invalid_args() {
     Command::new(cargo_bin!("ezarc"))
-        .arg("out")
+        .arg("test_out")
         .args(["invalid_input_1.txt", "invalid_input_2.txt"])
         .assert()
         .failure()
@@ -95,7 +95,7 @@ fn success_with_extract_flag() -> Result<()> {
 
     Command::new(cargo_bin!("ezarc"))
         .arg("-x")
-        .arg("out")
+        .arg("test_out")
         .args([input_1.canonicalize()?.display().to_string()])
         .assert()
         .success();
@@ -115,7 +115,7 @@ fn failure_with_extract_flag() -> Result<()> {
 
     Command::new(cargo_bin!("ezarc"))
         .arg("-x")
-        .arg("out")
+        .arg("test_out")
         .args([input_1.canonicalize()?.display().to_string(), tmp_dir_1.path().canonicalize()?.display().to_string()])
         .assert()
         .failure()

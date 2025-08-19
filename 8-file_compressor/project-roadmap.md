@@ -45,10 +45,11 @@ file_compressor/
 - [x] Define CLI structure with subcommands:
     - [x] `compress` - Archive and compress files
     - [x] `extract` - Extract files from archives
-- [ ] Support basic flags:
-    - [x] `-o/--output` to indicate output file location
-    - [ ] `-d/--directory` to indicate input and/or output directory
+- [x] Support basic flags:
     - [x] `-x/--extract` to indicate decompression
+    - [x] `--zip` to indicate ZIP format
+    - [x] `--gzip` to indicate GZIP format
+    - [x] `--bzip2` to indicate BZIP2 format
 - [x] Add basic logging and error handling via `anyhow`
 
 ## **Phase 2: Basic Archival and Extraction with ZIP**
@@ -58,17 +59,17 @@ file_compressor/
 
 - [x] Add `zip` crate
 - [x] Implement compression with the `--zip` flag:
-    - [x] Single input file into single output `.zip` file
-    - [x] Multiple input files into multiple output `.zip` files
-    - [ ] Archive a specified directory with the `-d` flag
-    - [x] Archive _**to**_ a specified directory with the `-d` flag
-- [ ] Implement extraction:
-    - [ ] Single input `.zip` file into single output file
-    - [ ] Multiple input `.zip` files into multiple output files
-    - [ ] Extract a specified directory with the `-d` flag
-    - [ ] Extract _**to**_ a specified directory with the `-d` flag
-- [ ] Add test cases (**_Note_**: Consider using crates like `trycmd` and `snapbox`)
-- [ ] Handle overwrite checks, file errors, etc
+    - [x] Support single input file
+    - [x] Support multiple input files
+    - [x] Support directory as input
+    - [x] Output to specified directory
+- [x] Implement extraction:
+    - [x] Support single input archive
+    - [x] Support multiple input archives
+    - [x] Support archived directory as input
+    - [x] Output to specified directory
+- [x] Add test cases (**_Note_**: Consider using crates like `trycmd` and `snapbox`)
+- [x] Handle overwrite checks, file errors, etc
 
 ## **Phase 3: Advanced Archival and Extraction with GZIP and BZIP2**
 **Goal**: Implement GZIP and BZIP2 compression and extraction with the `flate2` and `bzip2` crates.

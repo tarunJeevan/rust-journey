@@ -3,7 +3,7 @@ use clap::{Args, Parser};
 
 use std::path::PathBuf;
 use walkdir::WalkDir;
-// use crate::commands::{compress_to_zip, extract_zip};
+use crate::commands::{compress_to_zip, extract_zip};
 
 mod commands;
 
@@ -20,7 +20,7 @@ struct Cli {
     #[arg(short = 'x', long)]
     extract: bool,
 
-    /// Output archive path
+    /// Output archive path. Extension must match archive format, e.g., ".zip" for ZIP format
     #[arg(num_args = 1)]
     output: PathBuf,
 
@@ -52,10 +52,10 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Get and validate input files
-    let _input_files = validate_input_files(cli.input, cli.extract);
+    let input_files = validate_input_files(cli.input, cli.extract);
 
     // Calculate compression scheme
-    let _schema = if let Some(s) = cli.schema {
+    let schema = if let Some(s) = cli.schema {
         match s {
             Schema { zip: true, .. } => "zip",
             Schema { bzip2: true, .. } => "bzip2",
@@ -65,21 +65,29 @@ fn main() -> Result<()> {
     } else {
         "zip"
     };
+    
+    // Get and validate output
+    let output = validate_output(cli.output, cli.extract, schema);
 
-    // TODO: Remove placeholder
-    // println!("Input files: {input_files:?}");
-
-    // if cli.extract {
-    //     println!("Extracting files. Input: {input_files:?}. Output: {:?}.", cli.output);
-    // } else {
-    //     for file in &input_files {
-    //         compress_to_zip(file, &cli.output)?;
-    //     }
-    // }
+    if cli.extract {
+        for file in &input_files {
+            // FIXME: Fix file permissions for extracted files. Save file permission metadata in archive when compressing?
+            extract_zip(file, &output)?;
+        }
+    } else {
+        for file in &input_files {
+            compress_to_zip(file, &output)?;
+        }
+    }
 
     Ok(())
 }
 
+/// Helper function to validate the input files passed to the program, such as checking that they exist
+/// 
+/// `input` is a vector of the input file paths. `extract` indicates extraction operation if true
+/// 
+/// Returns the vector in `input`
 fn validate_input_files(input: Vec<PathBuf>, extract: bool) -> Vec<PathBuf> {
     // Ensure the input isn't empty
     if input.is_empty() {
@@ -136,4 +144,47 @@ fn validate_input_files(input: Vec<PathBuf>, extract: bool) -> Vec<PathBuf> {
     }
     // Return input files if all checks pass
     input
+}
+
+/// Helper function to validate output path when compressing, ensuring correct file extension
+/// 
+/// `output` is the output file path. `extract` indicates extraction operation if true. `schema` is the compression schema
+/// 
+/// Returns the output path as a `PathBuf`  
+fn validate_output(output: PathBuf, extract: bool, schema: &str) -> PathBuf {
+    if !extract {
+        match output.extension() {
+            Some(ext) => {
+                match schema {
+                    "zip" => {
+                        if ext != "zip" {
+                            eprintln!("Error: Invalid file extension. Use `--help` for more info: {}", output.display());
+                            std::process::exit(1);
+                        }
+                    },
+                    "gzip" => {
+                        if ext != "gz" {
+                            eprintln!("Error: Invalid file extension. Use `--help` for more info: {}", output.display());
+                            std::process::exit(1);
+                        }
+                    },
+                    "bzip2" => {
+                        if ext != "bz2" {
+                            eprintln!("Error: Invalid file extension. Use `--help` for more info: {}", output.display());
+                            std::process::exit(1);
+                        }
+                    },
+                    _ => {
+                        eprintln!("Error: Unsupported archive format: {}", output.display());
+                        std::process::exit(1);
+                    }
+                }
+            }
+            None => {
+                eprintln!("Error: Output must be an archive with an appropriate extension: {}", output.display());
+                std::process::exit(1);
+            }
+        }
+    }
+    output
 }
