@@ -29,7 +29,7 @@ fn success_with_multiple_files() -> Result<()> {
     let input_2 = create_temp_file(input_dir, "test_input_2.txt", "World!");
 
     Command::new(cargo_bin!("ezarc"))
-        .arg("test_out")
+        .arg("test_out.zip")
         .args([
             input_1.canonicalize()?.display().to_string(),
             input_2.canonicalize()?.display().to_string(),
@@ -47,7 +47,7 @@ fn success_with_input_directories() -> Result<()> {
     let tmp_dir_2 = TempDir::with_prefix("test_input_dir_2")?;
     
     Command::new(cargo_bin!("ezarc"))
-        .arg("test_out")
+        .arg("test_out.zip")
         .args([tmp_dir_1.path().canonicalize()?.display().to_string(), tmp_dir_2.path().canonicalize()?.display().to_string()])
         .assert()
         .success();
@@ -65,7 +65,7 @@ fn success_with_multiple_args() -> Result<()> {
     let input_1 = create_temp_file(input_dir, "test_input_1.txt", "Hello!");
     
     Command::new(cargo_bin!("ezarc"))
-        .arg("test_out")
+        .arg("test_out.zip")
         .args([input_1.canonicalize()?.display().to_string(), tmp_dir_1.path().canonicalize()?.display().to_string()])
         .assert()
         .success();
@@ -91,12 +91,25 @@ fn success_with_extract_flag() -> Result<()> {
     let tmp_dir_2 = tempdir()?;
     let input_dir = tmp_dir_2.path();
 
-    let input_1 = create_temp_file(input_dir, "test_input_1.zip", "Hello!");
+    // let input_1 = create_temp_file(input_dir, "test_input_1.zip", "Hello!");
+    let input_1 = create_temp_file(input_dir, "test_input_1.txt", "Hello!");
+    let input_2 = create_temp_file(input_dir, "test_input_2.txt", "World!");
 
+    // Compress test files
+    Command::new(cargo_bin!("ezarc"))
+        .arg("~/test_out.zip")
+        .args([
+            input_1.canonicalize()?.display().to_string(),
+            input_2.canonicalize()?.display().to_string(),
+        ])
+        .assert()
+        .success();
+
+    // Test extraction
     Command::new(cargo_bin!("ezarc"))
         .arg("-x")
-        .arg("test_out")
-        .args([input_1.canonicalize()?.display().to_string()])
+        .arg("test_extracted")
+        .arg("~/test_out.zip")
         .assert()
         .success();
     
