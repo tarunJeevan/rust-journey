@@ -104,18 +104,21 @@ To play this game, clone the repo and navigate into 7-snake_game. Run `cargo run
 cargo installed) or run `cargo build` and find the executable under `./target/debug/snake_game`.
 
 ## 8-file_compressor
-A file/folder compression and extraction CLI utility.
+A file compression and extraction utility. It can archive multiple input files and extract an archive of a supported format into the original files and directories.
 
-**Options**:
+#### Usage
+`ezarc [OPTIONS] <output> <input>`
 
-- Compression with multiple file formats (e.g., .zip, .gz, .xz, .tar.gz)
-    - Enabled via command line argument
-- Extraction from multiple file formats (e.g., .zip, .gz, .xz, .tar.gz)
-    - Enabled via command line argument
-- Usage: `ezarc [OPTIONS] <input> <output>`
+Supports:
+- Multiple input files
+- Directories as input
+- Compression into multiple formats (e.g., Zip, Gzip, Bzip2, Xz, Tar, etc.)
+    - Enabled via flag
+    - **Note: Currently only supports ZIP**
+- Extraction from multiple formats (e.g., Zip, Gzip, Bzip2, Xz, Tar, etc.)
+    - Enabled via flag
+    - **Note: Currently only supports ZIP**
+- Usage: `ezarc [OPTIONS] <output> <input>`
     - _Options_:
-        - `-u` for decryption/unzip. Archives by default.
-        - flags for different compression schemes
-        - `-d` for directories. Accepts files by default (Stretch goal)
-        - Accept multiple input and output files (Stretch goal)
-        - Output input file(s) into specified output directory (Stretch goal)
+        - `-x` for extraction/unzip. Archives by default.
+        - Flags for different compression schemes (e.g., `--gzip` and `--bzip2`)
